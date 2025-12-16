@@ -21,6 +21,8 @@ export default async function ProductsListPage() {
     console.error('Error fetching products:', error);
   }
 
+  type ProductRow = typeof products extends (infer U)[] ? U : never;
+
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
@@ -60,7 +62,7 @@ export default async function ProductsListPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {products && products.length > 0 ? (
-              products.map((product) => (
+              products.map((product: ProductRow) => (
                 <tr key={product.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">

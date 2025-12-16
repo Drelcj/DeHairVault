@@ -23,7 +23,15 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!userData || (userData.role !== UserRole.ADMIN && userData.role !== UserRole.SUPER_ADMIN)) {
+    type UserData = { role: UserRole };
+
+    if (!userData) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const typedUserData = userData as UserData;
+
+    if (typedUserData.role !== UserRole.ADMIN && typedUserData.role !== UserRole.SUPER_ADMIN) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -33,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Insert product
     const { data: newProduct, error: productError } = await supabase
       .from('products')
-      .insert([product])
+      .insert(product)
       .select()
       .single();
 
@@ -93,7 +101,15 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!userData || (userData.role !== UserRole.ADMIN && userData.role !== UserRole.SUPER_ADMIN)) {
+    type UserData = { role: UserRole };
+
+    if (!userData) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const typedUserData = userData as UserData;
+
+    if (typedUserData.role !== UserRole.ADMIN && typedUserData.role !== UserRole.SUPER_ADMIN) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

@@ -27,8 +27,17 @@ export default async function AdminLayout({
     .eq('id', user.id)
     .single();
 
+  // Type guard to handle the userData
+  type UserData = { role: UserRole };
+
   // Check if user has admin access
-  if (error || !userData || (userData.role !== UserRole.ADMIN && userData.role !== UserRole.SUPER_ADMIN)) {
+  if (error || !userData) {
+    redirect('/');
+  }
+
+  const typedUserData = userData as UserData;
+
+  if (typedUserData.role !== UserRole.ADMIN && typedUserData.role !== UserRole.SUPER_ADMIN) {
     redirect('/');
   }
 

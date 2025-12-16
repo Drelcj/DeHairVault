@@ -1,7 +1,7 @@
 // Product Editing Page
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProductForm, type ProductFormData, type VariantFormData } from '@/hooks/useProductForm';
 import {
@@ -26,7 +26,8 @@ import {
 } from '@/components/ui/select';
 import { HairGrade, HairTexture, HairOrigin, HairCategory, DrawType, type Product, type ProductVariant } from '@/types/database.types';
 
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<VariantFormData[]>([]);
@@ -66,7 +67,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`/api/admin/products/${params.id}`);
+        const response = await fetch(`/api/admin/products/${id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch product');
         }
@@ -122,7 +123,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     };
 
     fetchProduct();
-  }, [params.id]);
+  }, [id]);
 
   const handleNameChange = (name: string) => {
     setFormData({

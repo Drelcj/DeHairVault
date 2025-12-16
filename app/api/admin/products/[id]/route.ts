@@ -5,10 +5,11 @@ import { UserRole } from '@/types/database.types';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
+    const { id } = await params;
 
     // Check authentication
     const {
@@ -26,7 +27,15 @@ export async function GET(
       .eq('id', user.id)
       .single();
 
-    if (!userData || (userData.role !== UserRole.ADMIN && userData.role !== UserRole.SUPER_ADMIN)) {
+    type UserData = { role: UserRole };
+
+    if (!userData) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const typedUserData = userData as UserData;
+
+    if (typedUserData.role !== UserRole.ADMIN && typedUserData.role !== UserRole.SUPER_ADMIN) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -34,7 +43,7 @@ export async function GET(
     const { data: product, error: productError } = await supabase
       .from('products')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (productError || !product) {
@@ -45,7 +54,7 @@ export async function GET(
     const { data: variants } = await supabase
       .from('product_variants')
       .select('*')
-      .eq('product_id', params.id)
+      .eq('product_id', id)
       .order('length', { ascending: true });
 
     return NextResponse.json({ product, variants: variants || [] }, { status: 200 });
@@ -57,10 +66,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
+    const { id } = await params;
 
     // Check authentication
     const {
@@ -78,7 +88,15 @@ export async function PUT(
       .eq('id', user.id)
       .single();
 
-    if (!userData || (userData.role !== UserRole.ADMIN && userData.role !== UserRole.SUPER_ADMIN)) {
+    type UserData = { role: UserRole };
+
+    if (!userData) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const typedUserData = userData as UserData;
+
+    if (typedUserData.role !== UserRole.ADMIN && typedUserData.role !== UserRole.SUPER_ADMIN) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -89,7 +107,7 @@ export async function PUT(
     const { data: updatedProduct, error: productError } = await supabase
       .from('products')
       .update(product)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -101,12 +119,12 @@ export async function PUT(
     // Handle variants update
     if (variants && variants.length > 0) {
       // Delete existing variants
-      await supabase.from('product_variants').delete().eq('product_id', params.id);
+      await supabase.from('product_variants').delete().eq('product_id', id);
 
       // Insert new variants
       const variantsWithProductId = variants.map((v: any) => ({
         ...v,
-        product_id: params.id,
+        product_id: id,
       }));
 
       const { error: variantsError } = await supabase
@@ -134,10 +152,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
+    const { id } = await params;
 
     // Check authentication
     const {
@@ -155,12 +174,20 @@ export async function DELETE(
       .eq('id', user.id)
       .single();
 
-    if (!userData || (userData.role !== UserRole.ADMIN && userData.role !== UserRole.SUPER_ADMIN)) {
+    type UserData = { role: UserRole };
+
+    if (!userData) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const typedUserData = userData as UserData;
+
+    if (typedUserData.role !== UserRole.ADMIN && typedUserData.role !== UserRole.SUPER_ADMIN) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Delete product (variants will be cascade deleted if foreign key is set)
-    const { error } = await supabase.from('products').delete().eq('id', params.id);
+    const { error } = await supabase.from('products').delete().eq('id', id);
 
     if (error) {
       console.error('Product delete error:', error);
