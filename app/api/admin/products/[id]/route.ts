@@ -1,7 +1,7 @@
 // API Route: Get, Update, Delete Product by ID
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { UserRole } from '@/types/database.types';
+import { UserRole, type ProductUpdate } from '@/types/database.types';
 
 export async function GET(
   request: NextRequest,
@@ -104,15 +104,21 @@ export async function PUT(
     const { product, variants } = await request.json();
 
     // Update product
+    const updateData = product as ProductUpdate;
     const { data: updatedProduct, error: productError } = await supabase
       .from('products')
-      .update(product)
+      // @ts-expect-error - Supabase type inference issue with Database types
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
     if (productError) {
       console.error('Product update error:', productError);
+      return NextResponse.json({ error: 'Failed to update product' }, { status: 500 });
+    }
+
+    if (!updatedProduct) {
       return NextResponse.json({ error: 'Failed to update product' }, { status: 500 });
     }
 

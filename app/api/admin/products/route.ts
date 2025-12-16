@@ -1,7 +1,7 @@
 // API Route: Create Product
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { UserRole } from '@/types/database.types';
+import { UserRole, type Product } from '@/types/database.types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,10 +38,10 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const { product, variants } = await request.json();
 
-    // Insert product
+    // Insert product - cast to any to allow insert
     const { data: newProduct, error: productError } = await supabase
       .from('products')
-      .insert(product)
+      .insert(product as any)
       .select()
       .single();
 
@@ -50,11 +50,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
     }
 
+    if (!newProduct) {
+      return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
+    }
+
+    // Type assertion after null check
+    const typedProduct = newProduct as Product;
+
     // Insert variants if provided
     if (variants && variants.length > 0) {
       const variantsWithProductId = variants.map((v: any) => ({
         ...v,
-        product_id: newProduct.id,
+        product_id: typedProduct.id,
       }));
 
       const { error: variantsError } = await supabase
@@ -66,7 +73,7 @@ export async function POST(request: NextRequest) {
         // Note: Product was created, but variants failed
         return NextResponse.json(
           {
-            product: newProduct,
+            product: typedProduct,
             error: 'Product created but variants failed',
           },
           { status: 201 }
@@ -74,7 +81,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ product: newProduct }, { status: 201 });
+    return NextResponse.json({ product: typedProduct }, { status: 201 });
   } catch (error) {
     console.error('Product creation error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

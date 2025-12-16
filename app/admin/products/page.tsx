@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import type { Product } from '@/types/database.types';
 
 export const metadata = {
   title: 'Products | Admin Dashboard',
@@ -20,8 +21,6 @@ export default async function ProductsListPage() {
   if (error) {
     console.error('Error fetching products:', error);
   }
-
-  type ProductRow = typeof products extends (infer U)[] ? U : never;
 
   return (
     <div>
@@ -62,7 +61,7 @@ export default async function ProductsListPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {products && products.length > 0 ? (
-              products.map((product: ProductRow) => (
+              products.map((product: Product) => (
                 <tr key={product.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
