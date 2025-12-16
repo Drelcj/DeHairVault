@@ -10,6 +10,9 @@ export async function updateSession(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Supabase env vars missing; skipping session refresh.');
+    }
     return NextResponse.next({ request });
   }
 
