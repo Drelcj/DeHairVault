@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,11 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { createClient } from "@/lib/supabase/client"
 
-function LoginFormInner() {
+type LoginFormProps = {
+  redirectTo?: string
+}
+
+function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -22,8 +26,6 @@ function LoginFormInner() {
   })
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const redirectTo = searchParams.get("redirectTo") || "/"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -235,10 +237,10 @@ function LoginFormInner() {
 }
 
 // Wrapper component with Suspense boundary for useSearchParams
-export function LoginForm() {
+export function LoginForm(props: LoginFormProps) {
   return (
     <Suspense fallback={<div className="flex justify-center items-center min-h-[400px]"><p>Loading...</p></div>}>
-      <LoginFormInner />
+      <LoginFormInner {...props} />
     </Suspense>
   )
 }
