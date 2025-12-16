@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Header } from "@/components/header"
+import { HeaderShell } from "@/components/header-shell"
 import { Footer } from "@/components/footer"
 import { PoliciesHero } from "@/components/policies-hero"
 import { PoliciesSidebar } from "@/components/policies-sidebar"
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function PoliciesPage() {
   return (
     <main className="min-h-screen bg-background">
-      <Header />
+      <HeaderShell />
       <PoliciesHero />
 
       <section className="py-16 lg:py-24">

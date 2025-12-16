@@ -60,6 +60,7 @@ export function LoginForm() {
       destination = redirectTo === "/" ? "/admin" : redirectTo
     }
 
+    router.refresh()
     router.push(destination)
   }
 

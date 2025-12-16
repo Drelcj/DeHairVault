@@ -1,4 +1,4 @@
-import { Header } from "@/components/header"
+import { HeaderShell } from "@/components/header-shell"
 import { Footer } from "@/components/footer"
 import { AboutHero } from "@/components/about-hero"
 import { MissionSection } from "@/components/mission-section"
@@ -15,7 +15,7 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-background">
-      <Header />
+      <HeaderShell />
       <AboutHero />
       <MissionSection />
       <QualitySection />

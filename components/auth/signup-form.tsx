@@ -77,6 +77,7 @@ export function SignupForm() {
       return
     }
 
+    router.refresh()
     router.push("/login?signup=success")
   }
 

@@ -1,4 +1,4 @@
-import { Header } from "@/components/header"
+import { HeaderShell } from "@/components/header-shell"
 import { Footer } from "@/components/footer"
 import { ShopHero } from "@/components/shop-hero"
 import { ShopContent } from "@/components/shop-content"
@@ -12,7 +12,7 @@ export const metadata = {
 export default function ShopPage() {
   return (
     <main className="min-h-screen bg-background">
-      <Header />
+      <HeaderShell />
       <ShopHero />
       <ShopContent />
       <Footer />

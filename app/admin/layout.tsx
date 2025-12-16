@@ -1,9 +1,21 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { getSessionUser } from '@/lib/auth/session'
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export const dynamic = 'force-dynamic'
+
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const session = await getSessionUser()
+  const role = session?.profile?.role
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN'
+
+  if (!isAdmin) {
+    return redirect('/login?redirectTo=/admin')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="border-b bg-white">

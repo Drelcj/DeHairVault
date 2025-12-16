@@ -1,17 +1,36 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useTransition } from "react"
 import Link from "next/link"
-import { ShoppingBag, User, Menu, X, Moon, Sun } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ShoppingBag, User, Menu, X, Moon, Sun, LogOut, Shield } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 
-export function Header() {
+type HeaderProps = {
+  isAuthed?: boolean
+  isAdmin?: boolean
+  name?: string | null
+}
+
+export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [isSigningOut, startTransition] = useTransition()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    startTransition(async () => {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      router.refresh()
+      router.push('/')
+    })
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -81,12 +100,34 @@ export function Header() {
               </Button>
             )}
 
-            <Button asChild variant="ghost" size="icon" className="hidden md:flex rounded-full hover:bg-secondary">
-              <Link href="/login">
-                <User className="h-5 w-5" />
-                <span className="sr-only">Account</span>
-              </Link>
-            </Button>
+            {!isAuthed ? (
+              <Button asChild variant="ghost" size="icon" className="hidden md:flex rounded-full hover:bg-secondary">
+                <Link href="/login">
+                  <User className="h-5 w-5" />
+                  <span className="sr-only">Account</span>
+                </Link>
+              </Button>
+            ) : (
+              <div className="hidden md:flex items-center gap-2">
+                {isAdmin && (
+                  <Button asChild variant="ghost" size="icon" className="rounded-full hover:bg-secondary">
+                    <Link href="/admin">
+                      <Shield className="h-5 w-5" />
+                      <span className="sr-only">Admin</span>
+                    </Link>
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full hover:bg-secondary"
+                  onClick={handleLogout}
+                  disabled={isSigningOut}
+                >
+                  {isSigningOut ? 'Signing out...' : name ? `Hi, ${name.split(' ')[0]}` : 'Profile'}
+                </Button>
+              </div>
+            )}
 
             <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary relative">
               <ShoppingBag className="h-5 w-5" />
@@ -134,13 +175,38 @@ export function Header() {
               >
                 Contact Us
               </Link>
-              <Link
-                href="/login"
-                className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Login
-              </Link>
+              {!isAuthed ? (
+                <Link
+                  href="/login"
+                  className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Login
+                </Link>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Admin
+                    </Link>
+                  )}
+                  <button
+                    className="flex items-center gap-2 text-left text-lg font-medium text-foreground hover:text-accent transition-colors"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false)
+                      handleLogout()
+                    }}
+                    disabled={isSigningOut}
+                  >
+                    <LogOut className="h-5 w-5" />
+                    {isSigningOut ? 'Signing out...' : 'Logout'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
