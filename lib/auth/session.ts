@@ -3,16 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 // Fetch the authenticated user and their profile (role) from the users table.
 export async function getSessionUser() {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('Supabase env vars missing; skipping session lookup.')
-      }
-      return null
-    }
-
     const supabase = await createClient()
 
     const {
@@ -29,7 +19,12 @@ export async function getSessionUser() {
 
     return { user, profile }
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
+    const hasEnv = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    if (!hasEnv) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('Supabase env vars missing; skipping session lookup.')
+      }
+    } else if (process.env.NODE_ENV !== 'production') {
       console.error('Failed to fetch session user', error)
     }
     return null
