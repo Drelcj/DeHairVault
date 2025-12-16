@@ -81,9 +81,11 @@ export function Header() {
               </Button>
             )}
 
-            <Button variant="ghost" size="icon" className="hidden md:flex rounded-full hover:bg-secondary">
-              <User className="h-5 w-5" />
-              <span className="sr-only">Account</span>
+            <Button asChild variant="ghost" size="icon" className="hidden md:flex rounded-full hover:bg-secondary">
+              <Link href="/login">
+                <User className="h-5 w-5" />
+                <span className="sr-only">Account</span>
+              </Link>
             </Button>
 
             <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary relative">
@@ -131,6 +133,13 @@ export function Header() {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Contact Us
+              </Link>
+              <Link
+                href="/login"
+                className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Login
               </Link>
             </div>
           </div>
