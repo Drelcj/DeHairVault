@@ -1,5 +1,5 @@
-// Supabase Middleware Helper
-// Use this in middleware.ts to refresh auth sessions
+// Supabase Proxy Helper
+// Use this in proxy.ts to refresh auth sessions
 
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';

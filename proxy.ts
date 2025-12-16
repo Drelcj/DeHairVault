@@ -1,10 +1,15 @@
-// Auth Middleware
+// Auth Proxy
 // Protects admin routes and refreshes Supabase auth tokens
+// 
+// SECURITY NOTE: This proxy should NOT be used as the sole security boundary for authentication.
+// Per Next.js security recommendations, always verify authentication state in your API routes,
+// Server Actions, and page components as well. The proxy is primarily for session management
+// and initial request filtering.
 
 import { type NextRequest } from 'next/server';
-import { updateSession } from '@/lib/supabase/middleware';
+import { updateSession } from '@/lib/supabase/proxy';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }
 
