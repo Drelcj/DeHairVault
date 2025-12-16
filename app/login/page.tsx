@@ -5,8 +5,9 @@ import { LoginForm } from "@/components/auth/login-form"
 
 export const dynamic = 'force-dynamic'
 
-export default function LoginPage({ searchParams }: { searchParams: { redirectTo?: string } }) {
-  const redirectTo = typeof searchParams?.redirectTo === 'string' ? searchParams.redirectTo : '/'
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ redirectTo?: string }> }) {
+  const params = await searchParams
+  const redirectTo = typeof params?.redirectTo === 'string' ? params.redirectTo : '/'
   return (
     <main className="min-h-screen bg-background">
       <HeaderShell />
