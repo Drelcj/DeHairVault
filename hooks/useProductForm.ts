@@ -76,7 +76,6 @@ export function useProductForm(initialProduct?: Product) {
       
       // Redirect to product list on success
       router.push('/admin/products');
-      router.refresh();
       
       return result;
     } catch (err) {
