@@ -32,6 +32,10 @@ export async function createClient() {
   );
 }
 
+export function hasServiceClientConfig() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 // Service role client for admin operations (use with caution)
 export function createServiceClient() {
   return createServerClient<Database>(
