@@ -3,7 +3,16 @@ import { Button } from '@/components/ui/button'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { Product } from '@/types/database.types'
 
+export const dynamic = 'force-dynamic'
+
 async function fetchProducts(): Promise<Product[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return []
+  }
+
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('products')
