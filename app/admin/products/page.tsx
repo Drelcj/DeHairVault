@@ -28,12 +28,13 @@ async function getProducts(searchParams: Record<string, string | string[] | unde
   }
 }
 
-export default async function AdminProductsPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
-  const data = await getProducts(searchParams)
+export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams
+  const data = await getProducts(params)
   const products = data?.products ?? []
   const page = data?.page ?? 1
   const totalPages = data?.totalPages ?? 1
-  const q = searchParams.q ? String(searchParams.q) : ''
+  const q = params.q ? String(params.q) : ''
 
   return (
     <main className="min-h-screen bg-background">
