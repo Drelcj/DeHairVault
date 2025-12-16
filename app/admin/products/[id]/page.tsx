@@ -6,6 +6,8 @@ import { updateProductAction } from '@/app/admin/products/actions'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { ProductFormValues } from '@/types/admin'
 
+export const dynamic = 'force-dynamic'
+
 async function fetchProduct(id: string): Promise<ProductFormValues | null> {
   const supabase = createServiceClient()
   const { data: product, error } = await supabase.from('products').select('*').eq('id', id).single()

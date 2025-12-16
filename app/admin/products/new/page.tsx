@@ -4,6 +4,8 @@ import { ProductForm } from '@/app/admin/products/_components/product-form'
 import { createProductAction } from '@/app/admin/products/actions'
 import type { ProductFormValues } from '@/types/admin'
 
+export const dynamic = 'force-dynamic'
+
 export default function NewProductPage() {
   const handleSubmit = async (values: ProductFormValues) => {
     'use server'
