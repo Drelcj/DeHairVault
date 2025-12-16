@@ -69,7 +69,7 @@ export async function updateSession(request: NextRequest) {
     type UserRoleData = { role: string } | null;
     const typedUserData = userData as UserRoleData;
 
-    if (!typedUserData || userError || !['ADMIN', 'SUPER_ADMIN'].includes(typedUserData.role)) {
+    if (!typedUserData || userError || typedUserData.role !== 'ADMIN') {
       // Redirect to home if not admin
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/';

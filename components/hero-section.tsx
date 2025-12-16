@@ -78,7 +78,7 @@ export function HeroSection() {
                     <Sparkles className="h-6 w-6 text-primary-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-foreground">100% Virgin Hair</p>
+                    <p className="text-sm font-semibold text-foreground">100% Raw Hair</p>
                     <p className="text-xs text-muted-foreground">Ethically Sourced</p>
                   </div>
                 </div>

@@ -1,75 +1,60 @@
-import { createClient } from "@/lib/supabase/server"
-import ProductEditForm from "./product-edit-form"
-import type { Product, ProductVariant } from "@/types/database.types"
+import Link from "next/link"
+import { HeaderShell } from "@/components/header-shell"
+import { ProductEditForm } from "./_components/product-edit-form"
 
-interface PageProps {
-  params: { id: string }
-}
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: "Edit Product | De Hair Vault Admin",
 }
 
-export default async function ProductEditPage({ params }: PageProps) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+async function getProduct(id: string) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/admin/products/${id}`, { cache: 'no-store' })
+  if (!res.ok) return null
+  return res.json()
+}
 
-  if (!supabaseUrl || !supabaseKey) {
+export default async function AdminProductEditPage({ params }: { params: { id: string } }) {
+  const data = await getProduct(params.id)
+  const product = data?.product
+  const variants = data?.variants ?? []
+
+  if (!product) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <header className="space-y-2">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
-          <h1 className="text-3xl font-serif font-semibold">Edit Product</h1>
-          <p className="text-sm text-muted-foreground">
-            Supabase environment variables are not configured. Add NEXT_PUBLIC_SUPABASE_URL and
-            NEXT_PUBLIC_SUPABASE_ANON_KEY to enable product editing.
-          </p>
-        </header>
-      </div>
+      <main className="min-h-screen bg-background">
+        <HeaderShell />
+        <section className="container mx-auto px-6 lg:px-12 py-10">
+          <div className="mb-6">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
+            <h1 className="font-[--font-playfair] text-2xl md:text-3xl font-medium text-foreground">Edit Product</h1>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+            <p className="text-sm text-muted-foreground mb-4">Product not found.</p>
+            <Link href="/admin/products" className="text-accent hover:text-accent/80 text-sm font-medium">
+              ← Back to Products
+            </Link>
+          </div>
+        </section>
+      </main>
     )
   }
-
-  const supabase = await createClient()
-  const { data: product, error: productError } = await supabase
-    .from("products")
-    .select("*")
-    .eq("id", params.id)
-    .single()
-
-  if (productError || !product) {
-    return (
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <header className="space-y-2">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
-          <h1 className="text-3xl font-serif font-semibold">Edit Product</h1>
-        </header>
-        <div className="mt-6 rounded-lg border border-border bg-card p-6 shadow-sm">
-          <p className="text-sm text-muted-foreground">
-            We couldn&apos;t find a product with the provided ID. Verify the URL or select a product from the admin
-            catalog first.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  const { data: variants = [] } = await supabase
-    .from("product_variants")
-    .select("*")
-    .eq("product_id", product.id)
-    .order("length")
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
-        <h1 className="text-3xl font-serif font-semibold">Edit Product</h1>
-        <p className="text-sm text-muted-foreground">Update product details and manage variant overrides.</p>
-      </header>
+    <main className="min-h-screen bg-background">
+      <HeaderShell />
+      <section className="container mx-auto px-6 lg:px-12 py-10">
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
+              <h1 className="font-[--font-playfair] text-2xl md:text-3xl font-medium text-foreground">Edit {product.name}</h1>
+            </div>
+            <Link href="/admin/products" className="text-sm text-accent hover:text-accent/80">Back to Products</Link>
+          </div>
+        </div>
 
-      <div className="mt-8">
-        <ProductEditForm product={product as Product} variants={(variants ?? []) as ProductVariant[]} />
-      </div>
-    </div>
+        <ProductEditForm product={product} variants={variants} />
+      </section>
+    </main>
   )
 }
