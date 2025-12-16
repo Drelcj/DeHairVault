@@ -9,13 +9,20 @@ export const metadata = {
 }
 
 async function fetchPendingOrders() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/admin/orders?status=PENDING&page=1&pageSize=20&sort=created_at:desc`, {
-    cache: 'no-store',
-  })
-  if (!res.ok) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+    const res = await fetch(`${baseUrl}/api/admin/orders?status=PENDING&page=1&pageSize=20&sort=created_at:desc`, {
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      console.error('Failed to fetch orders:', res.status)
+      return { data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 0 } }
+    }
+    return res.json()
+  } catch (error) {
+    console.error('Error fetching orders:', error)
     return { data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 0 } }
   }
-  return res.json()
 }
 
 export default async function AdminOrdersPage() {

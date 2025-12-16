@@ -10,9 +10,18 @@ export const metadata = {
 }
 
 async function getOrder(id: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/admin/orders/${id}`, { cache: 'no-store' })
-  if (!res.ok) return null
-  return res.json()
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+    const res = await fetch(`${baseUrl}/api/admin/orders/${id}`, { cache: 'no-store' })
+    if (!res.ok) {
+      console.error('Failed to fetch order:', res.status)
+      return null
+    }
+    return res.json()
+  } catch (error) {
+    console.error('Error fetching order:', error)
+    return null
+  }
 }
 
 export default async function AdminOrderDetailPage({ params }: { params: { id: string } }) {

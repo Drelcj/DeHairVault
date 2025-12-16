@@ -9,14 +9,23 @@ export const metadata = {
 }
 
 async function getProducts(searchParams: Record<string, string | string[] | undefined>) {
-  const query = new URLSearchParams()
-  if (searchParams.q) query.append('q', String(searchParams.q))
-  if (searchParams.sort) query.append('sort', String(searchParams.sort))
-  if (searchParams.page) query.append('page', String(searchParams.page))
+  try {
+    const query = new URLSearchParams()
+    if (searchParams.q) query.append('q', String(searchParams.q))
+    if (searchParams.sort) query.append('sort', String(searchParams.sort))
+    if (searchParams.page) query.append('page', String(searchParams.page))
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/admin/products?${query}`, { cache: 'no-store' })
-  if (!res.ok) return { products: [], total: 0, page: 1, pageSize: 20, totalPages: 0 }
-  return res.json()
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+    const res = await fetch(`${baseUrl}/api/admin/products?${query}`, { cache: 'no-store' })
+    if (!res.ok) {
+      console.error('Failed to fetch products:', res.status)
+      return { products: [], total: 0, page: 1, pageSize: 20, totalPages: 0 }
+    }
+    return res.json()
+  } catch (error) {
+    console.error('Error fetching products:', error)
+    return { products: [], total: 0, page: 1, pageSize: 20, totalPages: 0 }
+  }
 }
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {

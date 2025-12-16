@@ -9,9 +9,18 @@ export const metadata = {
 }
 
 async function getProduct(id: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/admin/products/${id}`, { cache: 'no-store' })
-  if (!res.ok) return null
-  return res.json()
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+    const res = await fetch(`${baseUrl}/api/admin/products/${id}`, { cache: 'no-store' })
+    if (!res.ok) {
+      console.error('Failed to fetch product:', res.status)
+      return null
+    }
+    return res.json()
+  } catch (error) {
+    console.error('Error fetching product:', error)
+    return null
+  }
 }
 
 export default async function AdminProductEditPage({ params }: { params: { id: string } }) {
