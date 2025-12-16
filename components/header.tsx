@@ -1,9 +1,20 @@
 "use client"
 
-import { useState, useEffect, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ShoppingBag, User, Menu, X, Moon, Sun, LogOut, Shield } from "lucide-react"
+import {
+  ShoppingBag,
+  User,
+  UserCircle,
+  Menu,
+  X,
+  Moon,
+  Sun,
+  LogOut,
+  Shield,
+  ChevronDown,
+} from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -15,7 +26,7 @@ type HeaderProps = {
   name?: string | null
 }
 
-export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps) {
+export function Header({ isAuthed = false, isAdmin = false }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { theme, setTheme } = useTheme()
@@ -23,12 +34,16 @@ export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps)
   const [isSigningOut, startTransition] = useTransition()
   const router = useRouter()
 
+  // Desktop dropdown state
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
   const handleLogout = () => {
     startTransition(async () => {
       const supabase = createClient()
       await supabase.auth.signOut()
       router.refresh()
-      router.push('/')
+      router.push("/")
     })
   }
 
@@ -39,6 +54,16 @@ export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps)
     }
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!menuRef.current) return
+      if (menuRef.current.contains(e.target as Node)) return
+      setMenuOpen(false)
+    }
+    document.addEventListener("mousedown", onDocClick)
+    return () => document.removeEventListener("mousedown", onDocClick)
   }, [])
 
   const toggleTheme = () => {
@@ -100,6 +125,16 @@ export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps)
               </Button>
             )}
 
+            {/* Cart */}
+            <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary relative">
+              <ShoppingBag className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent text-accent-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                0
+              </span>
+              <span className="sr-only">Cart</span>
+            </Button>
+
+            {/* Auth: trigger and dropdown (desktop) */}
             {!isAuthed ? (
               <Button asChild variant="ghost" size="icon" className="hidden md:flex rounded-full hover:bg-secondary">
                 <Link href="/login">
@@ -108,34 +143,132 @@ export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps)
                 </Link>
               </Button>
             ) : (
-              <div className="hidden md:flex items-center gap-2">
-                {isAdmin && (
-                  <Button asChild variant="ghost" size="icon" className="rounded-full hover:bg-secondary">
-                    <Link href="/admin">
-                      <Shield className="h-5 w-5" />
-                      <span className="sr-only">Admin</span>
-                    </Link>
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full hover:bg-secondary"
-                  onClick={handleLogout}
-                  disabled={isSigningOut}
+              <div className="relative hidden md:block" ref={menuRef}>
+                {/* Trigger: User icon with hover circle; chevron for affordance */}
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border border-border bg-background/70 px-2.5 py-1.5",
+                    "hover:bg-secondary transition-colors",
+                  )}
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
                 >
-                  {isSigningOut ? 'Signing out...' : name ? `Hi, ${name.split(' ')[0]}` : 'Profile'}
-                </Button>
+                  <UserCircle className="h-6 w-6" />
+                  <ChevronDown className="h-4 w-4 opacity-70" />
+                </button>
+
+                {menuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 mt-2 w-72 rounded-lg border border-border bg-card shadow-md focus:outline-none"
+                  >
+                    <div className="p-2">
+                      {/* Section 1: Admin Actions (admin only) */}
+                      {isAdmin && (
+                        <>
+                          <p className="px-3 py-2 text-xs font-medium text-muted-foreground">Admin Control</p>
+                          <div className="space-y-1">
+                            <Link
+                              href="/admin"
+                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              <Shield className="h-4 w-4" />
+                              Dashboard
+                            </Link>
+                            <Link
+                              href="/admin/orders"
+                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              Orders
+                            </Link>
+                            <Link
+                              href="/admin/products"
+                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              Product Catalog
+                            </Link>
+                            <Link
+                              href="/admin/inventory"
+                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              Inventory
+                            </Link>
+                            <Link
+                              href="/admin/users"
+                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              Customers
+                            </Link>
+                            <Link
+                              href="/admin/returns"
+                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              Returns
+                            </Link>
+                          </div>
+                          <div className="my-2 border-t border-border" />
+                        </>
+                      )}
+
+                      {/* Section 2: Customer Actions (all authed) */}
+                      <p className="px-3 py-2 text-xs font-medium text-muted-foreground">My Shopping</p>
+                      <div className="space-y-1">
+                        <Link
+                          href="/account"
+                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          My Account
+                        </Link>
+                        <Link
+                          href="/account/orders"
+                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Orders
+                        </Link>
+                        <Link
+                          href="/account/inbox"
+                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Inbox
+                        </Link>
+                        <Link
+                          href="/account/wishlist"
+                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Wishlist
+                        </Link>
+                      </div>
+
+                      {/* Section 3: Session */}
+                      <div className="my-2 border-t border-border" />
+                      <button
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => {
+                          setMenuOpen(false)
+                          handleLogout()
+                        }}
+                        disabled={isSigningOut}
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {isSigningOut ? "Signing out..." : "Logout"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-
-            <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary relative">
-              <ShoppingBag className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent text-accent-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                0
-              </span>
-              <span className="sr-only">Cart</span>
-            </Button>
 
             {/* Mobile Menu Toggle */}
             <Button
@@ -175,6 +308,7 @@ export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps)
               >
                 Contact Us
               </Link>
+
               {!isAuthed ? (
                 <Link
                   href="/login"
@@ -185,15 +319,85 @@ export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps)
                 </Link>
               ) : (
                 <div className="flex flex-col gap-3">
+                  {/* Customer actions */}
+                  <Link
+                    href="/account"
+                    className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    My Account
+                  </Link>
+                  <Link
+                    href="/account/orders"
+                    className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Orders
+                  </Link>
+                  <Link
+                    href="/account/inbox"
+                    className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Inbox
+                  </Link>
+                  <Link
+                    href="/account/wishlist"
+                    className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Wishlist
+                  </Link>
+
+                  {/* Admin actions (admin only) */}
                   {isAdmin && (
-                    <Link
-                      href="/admin"
-                      className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Admin
-                    </Link>
+                    <>
+                      <Link
+                        href="/admin"
+                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Admin Dashboard
+                      </Link>
+                      <Link
+                        href="/admin/orders"
+                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Admin Orders
+                      </Link>
+                      <Link
+                        href="/admin/products"
+                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Product Catalog
+                      </Link>
+                      <Link
+                        href="/admin/inventory"
+                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Inventory
+                      </Link>
+                      <Link
+                        href="/admin/users"
+                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Customers
+                      </Link>
+                      <Link
+                        href="/admin/returns"
+                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Returns
+                      </Link>
+                    </>
                   )}
+
+                  {/* Session */}
                   <button
                     className="flex items-center gap-2 text-left text-lg font-medium text-foreground hover:text-accent transition-colors"
                     onClick={() => {
@@ -203,7 +407,7 @@ export function Header({ isAuthed = false, isAdmin = false, name }: HeaderProps)
                     disabled={isSigningOut}
                   >
                     <LogOut className="h-5 w-5" />
-                    {isSigningOut ? 'Signing out...' : 'Logout'}
+                    {isSigningOut ? "Signing out..." : "Logout"}
                   </button>
                 </div>
               )}
