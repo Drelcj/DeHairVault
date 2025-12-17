@@ -247,7 +247,7 @@ export async function getOrder(orderId: string) {
       return null
     }
 
-    return order
+    return order as any // Type assertion for joined query
   } catch (error) {
     console.error('Error in getOrder:', error)
     return null
@@ -275,7 +275,7 @@ export async function getOrderByNumber(orderNumber: string) {
       return null
     }
 
-    return order
+    return order as any // Type assertion for joined query
   } catch (error) {
     console.error('Error in getOrderByNumber:', error)
     return null
