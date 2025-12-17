@@ -7,20 +7,8 @@ import { ShoppingBag, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/utils/currency"
+import { textureDisplayMap, formatLengthRange } from "@/lib/utils/product"
 import type { Product } from "./shop-content"
-
-// Map texture enum values to display labels
-const textureDisplayMap: Record<string, string> = {
-  STRAIGHT: "Straight",
-  BODY_WAVE: "Body Wave",
-  LOOSE_WAVE: "Loose Wave",
-  DEEP_WAVE: "Deep Wave",
-  WATER_WAVE: "Water Wave",
-  KINKY_CURLY: "Kinky Curly",
-  JERRY_CURL: "Jerry Curl",
-  LOOSE_DEEP: "Loose Deep",
-  NATURAL_WAVE: "Natural Wave",
-}
 
 interface ProductCardProps {
   product: Product
@@ -30,10 +18,8 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isWishlisted, setIsWishlisted] = useState(false)
 
-  // Get the first available length for display
-  const displayLength = product.available_lengths.length > 0 
-    ? `${product.available_lengths[0]}"-${product.available_lengths[product.available_lengths.length - 1]}"`
-    : ''
+  // Get the length range for display (sorted)
+  const displayLength = formatLengthRange(product.available_lengths)
   
   // Get display texture
   const displayTexture = textureDisplayMap[product.texture] || product.texture

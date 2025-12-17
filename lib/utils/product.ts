@@ -3,6 +3,48 @@
 
 import type { Product, HairGrade } from '@/types/database.types';
 
+// Price filter constants (in NGN)
+export const MIN_PRICE_NGN = 0;
+export const MAX_PRICE_NGN = 1000000;
+
+// Map texture enum values to simplified display categories for filtering
+export const textureFilterMap: Record<string, string> = {
+  STRAIGHT: "Straight",
+  BODY_WAVE: "Wavy",
+  LOOSE_WAVE: "Wavy",
+  DEEP_WAVE: "Wavy",
+  WATER_WAVE: "Wavy",
+  KINKY_CURLY: "Curly",
+  JERRY_CURL: "Curly",
+  LOOSE_DEEP: "Wavy",
+  NATURAL_WAVE: "Wavy",
+};
+
+// Map texture enum values to full display names
+export const textureDisplayMap: Record<string, string> = {
+  STRAIGHT: "Straight",
+  BODY_WAVE: "Body Wave",
+  LOOSE_WAVE: "Loose Wave",
+  DEEP_WAVE: "Deep Wave",
+  WATER_WAVE: "Water Wave",
+  KINKY_CURLY: "Kinky Curly",
+  JERRY_CURL: "Jerry Curl",
+  LOOSE_DEEP: "Loose Deep",
+  NATURAL_WAVE: "Natural Wave",
+};
+
+/**
+ * Get display length range from array of available lengths
+ * @param lengths - Array of available lengths in inches
+ * @returns Formatted length range string (e.g., "12\"-24\"")
+ */
+export function formatLengthRange(lengths: number[]): string {
+  if (!lengths || lengths.length === 0) return '';
+  const sorted = [...lengths].sort((a, b) => a - b);
+  if (sorted.length === 1) return `${sorted[0]}"`;
+  return `${sorted[0]}"-${sorted[sorted.length - 1]}"`;
+}
+
 /**
  * Calculate product price with length modifier
  * @param product - Product object

@@ -7,24 +7,12 @@ import { ShopToolbar } from "./shop-toolbar"
 import { SlidersHorizontal, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { textureFilterMap, MIN_PRICE_NGN, MAX_PRICE_NGN } from "@/lib/utils/product"
 
 export interface FilterState {
   textures: string[]
   lengths: string[]
   priceRange: [number, number]
-}
-
-// Map texture enum values to display labels
-const textureDisplayMap: Record<string, string> = {
-  STRAIGHT: "Straight",
-  BODY_WAVE: "Wavy",
-  LOOSE_WAVE: "Wavy",
-  DEEP_WAVE: "Wavy",
-  WATER_WAVE: "Wavy",
-  KINKY_CURLY: "Curly",
-  JERRY_CURL: "Curly",
-  LOOSE_DEEP: "Wavy",
-  NATURAL_WAVE: "Wavy",
 }
 
 export interface Product {
@@ -52,7 +40,7 @@ export function ShopContent() {
   const [filters, setFilters] = useState<FilterState>({
     textures: [],
     lengths: [],
-    priceRange: [0, 1000000],
+    priceRange: [MIN_PRICE_NGN, MAX_PRICE_NGN],
   })
   const [sortBy, setSortBy] = useState("featured")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -69,10 +57,10 @@ export function ShopContent() {
       params.set('sort', sortBy)
       params.set('pageSize', '50')
       
-      if (filters.priceRange[0] > 0) {
+      if (filters.priceRange[0] > MIN_PRICE_NGN) {
         params.set('minPrice', String(filters.priceRange[0]))
       }
-      if (filters.priceRange[1] < 1000000) {
+      if (filters.priceRange[1] < MAX_PRICE_NGN) {
         params.set('maxPrice', String(filters.priceRange[1]))
       }
 
@@ -99,7 +87,7 @@ export function ShopContent() {
   const filteredProducts = products.filter((product) => {
     // Texture filter
     if (filters.textures.length > 0) {
-      const displayTexture = textureDisplayMap[product.texture] || product.texture
+      const displayTexture = textureFilterMap[product.texture] || product.texture
       if (!filters.textures.includes(displayTexture)) {
         return false
       }
@@ -120,7 +108,7 @@ export function ShopContent() {
   const activeFilterCount =
     filters.textures.length +
     filters.lengths.length +
-    (filters.priceRange[0] > 0 || filters.priceRange[1] < 1000000 ? 1 : 0)
+    (filters.priceRange[0] > MIN_PRICE_NGN || filters.priceRange[1] < MAX_PRICE_NGN ? 1 : 0)
 
   return (
     <section className="pb-24">

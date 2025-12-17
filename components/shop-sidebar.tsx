@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { formatPrice } from "@/lib/utils/currency"
+import { MIN_PRICE_NGN, MAX_PRICE_NGN } from "@/lib/utils/product"
 import type { FilterState } from "./shop-content"
 
 interface ShopSidebarProps {
@@ -16,10 +17,6 @@ interface ShopSidebarProps {
 
 const textures = ["Straight", "Wavy", "Curly"]
 const lengths = ['12"', '14"', '16"', '18"', '20"', '22"', '24"', '26"', '28"', '30"']
-
-// Price range in NGN (Nigerian Naira)
-const MIN_PRICE = 0
-const MAX_PRICE = 1000000
 
 export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
   const handleTextureChange = (texture: string, checked: boolean) => {
@@ -47,15 +44,15 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
     setFilters({
       textures: [],
       lengths: [],
-      priceRange: [MIN_PRICE, MAX_PRICE],
+      priceRange: [MIN_PRICE_NGN, MAX_PRICE_NGN],
     })
   }
 
   const hasActiveFilters =
     filters.textures.length > 0 ||
     filters.lengths.length > 0 ||
-    filters.priceRange[0] > MIN_PRICE ||
-    filters.priceRange[1] < MAX_PRICE
+    filters.priceRange[0] > MIN_PRICE_NGN ||
+    filters.priceRange[1] < MAX_PRICE_NGN
 
   return (
     <div className="space-y-8">
@@ -132,8 +129,8 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
         <div className="px-1">
           <Slider
             value={filters.priceRange}
-            min={MIN_PRICE}
-            max={MAX_PRICE}
+            min={MIN_PRICE_NGN}
+            max={MAX_PRICE_NGN}
             step={10000}
             onValueChange={handlePriceChange}
             className="w-full"
