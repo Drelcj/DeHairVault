@@ -1,17 +1,7 @@
 "use client"
 
 import { ProductCard } from "./product-card"
-
-interface Product {
-  id: number
-  name: string
-  price: number
-  texture: string
-  length: string
-  image: string
-  featured: boolean
-  createdAt: Date
-}
+import type { Product } from "@/types/database.types"
 
 interface ProductGridProps {
   products: Product[]

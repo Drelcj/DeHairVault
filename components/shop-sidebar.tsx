@@ -6,25 +6,40 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import type { FilterState } from "./shop-content"
+import { HairTexture } from "@/types/database.types"
+import type { FilterState } from "./shop-content-client"
 
 interface ShopSidebarProps {
   filters: FilterState
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>
+  minPrice: number
+  maxPrice: number
 }
 
-const textures = ["Straight", "Wavy", "Curly"]
-const lengths = ['12"', '14"', '16"', '18"', '20"', '22"', '24"']
+// Map database enum values to display labels
+const textureOptions: { value: HairTexture; label: string }[] = [
+  { value: HairTexture.STRAIGHT, label: "Straight" },
+  { value: HairTexture.BODY_WAVE, label: "Body Wave" },
+  { value: HairTexture.LOOSE_WAVE, label: "Loose Wave" },
+  { value: HairTexture.DEEP_WAVE, label: "Deep Wave" },
+  { value: HairTexture.WATER_WAVE, label: "Water Wave" },
+  { value: HairTexture.KINKY_CURLY, label: "Kinky Curly" },
+  { value: HairTexture.JERRY_CURL, label: "Jerry Curl" },
+  { value: HairTexture.LOOSE_DEEP, label: "Loose Deep" },
+  { value: HairTexture.NATURAL_WAVE, label: "Natural Wave" },
+]
 
-export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
-  const handleTextureChange = (texture: string, checked: boolean) => {
+const lengthOptions = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+
+export function ShopSidebar({ filters, setFilters, minPrice, maxPrice }: ShopSidebarProps) {
+  const handleTextureChange = (texture: HairTexture, checked: boolean) => {
     setFilters((prev) => ({
       ...prev,
       textures: checked ? [...prev.textures, texture] : prev.textures.filter((t) => t !== texture),
     }))
   }
 
-  const handleLengthChange = (length: string, checked: boolean) => {
+  const handleLengthChange = (length: number, checked: boolean) => {
     setFilters((prev) => ({
       ...prev,
       lengths: checked ? [...prev.lengths, length] : prev.lengths.filter((l) => l !== length),
@@ -42,15 +57,24 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
     setFilters({
       textures: [],
       lengths: [],
-      priceRange: [100, 300],
+      priceRange: [minPrice, maxPrice],
     })
   }
 
   const hasActiveFilters =
     filters.textures.length > 0 ||
     filters.lengths.length > 0 ||
-    filters.priceRange[0] > 100 ||
-    filters.priceRange[1] < 300
+    filters.priceRange[0] > minPrice ||
+    filters.priceRange[1] < maxPrice
+
+  // Format price in Naira
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0,
+    }).format(price)
+  }
 
   return (
     <div className="space-y-8">
@@ -73,19 +97,19 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
       <div className="space-y-4">
         <h4 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Texture</h4>
         <div className="space-y-3">
-          {textures.map((texture) => (
-            <div key={texture} className="flex items-center gap-3">
+          {textureOptions.map(({ value, label }) => (
+            <div key={value} className="flex items-center gap-3">
               <Checkbox
-                id={`texture-${texture}`}
-                checked={filters.textures.includes(texture)}
-                onCheckedChange={(checked) => handleTextureChange(texture, checked as boolean)}
+                id={`texture-${value}`}
+                checked={filters.textures.includes(value)}
+                onCheckedChange={(checked) => handleTextureChange(value, checked as boolean)}
                 className="border-border data-[state=checked]:bg-accent data-[state=checked]:border-accent"
               />
               <Label
-                htmlFor={`texture-${texture}`}
+                htmlFor={`texture-${value}`}
                 className="text-sm text-foreground cursor-pointer hover:text-accent transition-colors"
               >
-                {texture}
+                {label}
               </Label>
             </div>
           ))}
@@ -97,9 +121,9 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
 
       {/* Length Filter */}
       <div className="space-y-4">
-        <h4 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Length</h4>
+        <h4 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Length (inches)</h4>
         <div className="grid grid-cols-2 gap-3">
-          {lengths.map((length) => (
+          {lengthOptions.map((length) => (
             <div key={length} className="flex items-center gap-3">
               <Checkbox
                 id={`length-${length}`}
@@ -111,7 +135,7 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
                 htmlFor={`length-${length}`}
                 className="text-sm text-foreground cursor-pointer hover:text-accent transition-colors"
               >
-                {length}
+                {length}"
               </Label>
             </div>
           ))}
@@ -127,19 +151,19 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
         <div className="px-1">
           <Slider
             value={filters.priceRange}
-            min={100}
-            max={300}
-            step={10}
+            min={minPrice}
+            max={maxPrice}
+            step={1000}
             onValueChange={handlePriceChange}
             className="w-full"
           />
           <div className="flex items-center justify-between mt-4">
             <div className="px-3 py-1.5 bg-secondary rounded-md">
-              <span className="text-sm font-medium text-foreground">${filters.priceRange[0]}</span>
+              <span className="text-sm font-medium text-foreground">{formatPrice(filters.priceRange[0])}</span>
             </div>
             <span className="text-muted-foreground text-sm">to</span>
             <div className="px-3 py-1.5 bg-secondary rounded-md">
-              <span className="text-sm font-medium text-foreground">${filters.priceRange[1]}</span>
+              <span className="text-sm font-medium text-foreground">{formatPrice(filters.priceRange[1])}</span>
             </div>
           </div>
         </div>
