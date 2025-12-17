@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { getOrder } from '@/lib/actions/checkout'
+import { getOrder, getExchangeRates } from '@/lib/actions/checkout'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover',
@@ -25,9 +25,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Convert NGN to USD (or other display currency)
-    // For Stripe, we'll use USD conversion
-    const usdExchangeRate = 1650 // NGN to USD (this should come from exchange_rates table)
+    // Get exchange rate from database for USD
+    const exchangeRates = await getExchangeRates()
+    const usdRate = exchangeRates.find((rate) => rate.currency_code === 'USD')
+    
+    if (!usdRate) {
+      return NextResponse.json(
+        { error: 'USD exchange rate not configured' },
+        { status: 500 }
+      )
+    }
+
+    // Convert NGN to USD using the exchange rate
+    const usdExchangeRate = usdRate.rate_to_ngn
     const amountInUSD = order.total_ngn / usdExchangeRate
 
     // Create line items from order items
