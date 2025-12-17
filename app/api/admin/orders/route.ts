@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     .eq('id', user.id)
     .single()
 
-  if (roleErr || !roleRow || roleRow.role !== 'ADMIN') {
+  if (roleErr || !roleRow || (roleRow.role !== 'ADMIN' && roleRow.role !== 'SUPER_ADMIN')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

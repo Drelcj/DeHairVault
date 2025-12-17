@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { formatPrice } from "@/lib/utils/currency"
 import type { FilterState } from "./shop-content"
 
 interface ShopSidebarProps {
@@ -14,7 +15,11 @@ interface ShopSidebarProps {
 }
 
 const textures = ["Straight", "Wavy", "Curly"]
-const lengths = ['12"', '14"', '16"', '18"', '20"', '22"', '24"']
+const lengths = ['12"', '14"', '16"', '18"', '20"', '22"', '24"', '26"', '28"', '30"']
+
+// Price range in NGN (Nigerian Naira)
+const MIN_PRICE = 0
+const MAX_PRICE = 1000000
 
 export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
   const handleTextureChange = (texture: string, checked: boolean) => {
@@ -42,15 +47,15 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
     setFilters({
       textures: [],
       lengths: [],
-      priceRange: [100, 300],
+      priceRange: [MIN_PRICE, MAX_PRICE],
     })
   }
 
   const hasActiveFilters =
     filters.textures.length > 0 ||
     filters.lengths.length > 0 ||
-    filters.priceRange[0] > 100 ||
-    filters.priceRange[1] < 300
+    filters.priceRange[0] > MIN_PRICE ||
+    filters.priceRange[1] < MAX_PRICE
 
   return (
     <div className="space-y-8">
@@ -127,19 +132,19 @@ export function ShopSidebar({ filters, setFilters }: ShopSidebarProps) {
         <div className="px-1">
           <Slider
             value={filters.priceRange}
-            min={100}
-            max={300}
-            step={10}
+            min={MIN_PRICE}
+            max={MAX_PRICE}
+            step={10000}
             onValueChange={handlePriceChange}
             className="w-full"
           />
           <div className="flex items-center justify-between mt-4">
             <div className="px-3 py-1.5 bg-secondary rounded-md">
-              <span className="text-sm font-medium text-foreground">${filters.priceRange[0]}</span>
+              <span className="text-sm font-medium text-foreground">{formatPrice(filters.priceRange[0], 'NGN', { showDecimals: false })}</span>
             </div>
             <span className="text-muted-foreground text-sm">to</span>
             <div className="px-3 py-1.5 bg-secondary rounded-md">
-              <span className="text-sm font-medium text-foreground">${filters.priceRange[1]}</span>
+              <span className="text-sm font-medium text-foreground">{formatPrice(filters.priceRange[1], 'NGN', { showDecimals: false })}</span>
             </div>
           </div>
         </div>

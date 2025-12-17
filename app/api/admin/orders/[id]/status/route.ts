@@ -10,7 +10,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: roleRow } = await supabase.from('users').select('role').eq('id', user.id).single<{ role: string | null }>()
-  if (!roleRow || roleRow.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!roleRow || (roleRow.role !== 'ADMIN' && roleRow.role !== 'SUPER_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
   const { status, tracking_number, tracking_url, admin_notes } = body ?? {}

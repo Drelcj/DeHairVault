@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ShopSidebar } from "./shop-sidebar"
 import { ProductGrid } from "./product-grid"
 import { ShopToolbar } from "./shop-toolbar"
-import { SlidersHorizontal, X } from "lucide-react"
+import { SlidersHorizontal, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 
@@ -14,178 +14,113 @@ export interface FilterState {
   priceRange: [number, number]
 }
 
-const products = [
-  {
-    id: 1,
-    name: "Silky Straight Bundle",
-    price: 180,
-    texture: "Straight",
-    length: '18"',
-    image: "silky straight hair bundle elegant packaging",
-    featured: true,
-    createdAt: new Date("2024-01-15"),
-  },
-  {
-    id: 2,
-    name: "Body Wave Bundle",
-    price: 195,
-    texture: "Wavy",
-    length: '20"',
-    image: "body wave hair extensions luxurious",
-    featured: true,
-    createdAt: new Date("2024-02-01"),
-  },
-  {
-    id: 3,
-    name: "Deep Curly Bundle",
-    price: 220,
-    texture: "Curly",
-    length: '16"',
-    image: "deep curly hair bundle premium quality",
-    featured: false,
-    createdAt: new Date("2024-03-10"),
-  },
-  {
-    id: 4,
-    name: "Natural Wave Bundle",
-    price: 175,
-    texture: "Wavy",
-    length: '14"',
-    image: "natural wave hair extensions elegant",
-    featured: true,
-    createdAt: new Date("2024-01-20"),
-  },
-  {
-    id: 5,
-    name: "Kinky Straight Bundle",
-    price: 200,
-    texture: "Straight",
-    length: '22"',
-    image: "kinky straight hair bundle luxury",
-    featured: false,
-    createdAt: new Date("2024-02-15"),
-  },
-  {
-    id: 6,
-    name: "Loose Wave Bundle",
-    price: 185,
-    texture: "Wavy",
-    length: '18"',
-    image: "loose wave hair extensions premium",
-    featured: true,
-    createdAt: new Date("2024-03-01"),
-  },
-  {
-    id: 7,
-    name: "Jerry Curl Bundle",
-    price: 210,
-    texture: "Curly",
-    length: '14"',
-    image: "jerry curl hair bundle elegant styling",
-    featured: false,
-    createdAt: new Date("2024-01-25"),
-  },
-  {
-    id: 8,
-    name: "Straight Closure",
-    price: 150,
-    texture: "Straight",
-    length: '16"',
-    image: "straight lace closure luxury hair",
-    featured: true,
-    createdAt: new Date("2024-02-20"),
-  },
-  {
-    id: 9,
-    name: "Water Wave Bundle",
-    price: 205,
-    texture: "Wavy",
-    length: '24"',
-    image: "water wave hair extensions elegant",
-    featured: false,
-    createdAt: new Date("2024-03-15"),
-  },
-  {
-    id: 10,
-    name: "Afro Kinky Curly",
-    price: 230,
-    texture: "Curly",
-    length: '12"',
-    image: "afro kinky curly hair bundle premium",
-    featured: true,
-    createdAt: new Date("2024-01-30"),
-  },
-  {
-    id: 11,
-    name: "Yaki Straight Bundle",
-    price: 190,
-    texture: "Straight",
-    length: '20"',
-    image: "yaki straight hair extensions luxury",
-    featured: false,
-    createdAt: new Date("2024-02-25"),
-  },
-  {
-    id: 12,
-    name: "Bohemian Curl Bundle",
-    price: 215,
-    texture: "Curly",
-    length: '18"',
-    image: "bohemian curl hair bundle elegant",
-    featured: true,
-    createdAt: new Date("2024-03-05"),
-  },
-]
+// Map texture enum values to display labels
+const textureDisplayMap: Record<string, string> = {
+  STRAIGHT: "Straight",
+  BODY_WAVE: "Wavy",
+  LOOSE_WAVE: "Wavy",
+  DEEP_WAVE: "Wavy",
+  WATER_WAVE: "Wavy",
+  KINKY_CURLY: "Curly",
+  JERRY_CURL: "Curly",
+  LOOSE_DEEP: "Wavy",
+  NATURAL_WAVE: "Wavy",
+}
+
+export interface Product {
+  id: string
+  name: string
+  slug: string
+  short_description: string | null
+  grade: string
+  origin: string
+  texture: string
+  category: string
+  base_price_ngn: number
+  compare_at_price_ngn: number | null
+  available_lengths: number[]
+  images: string[]
+  thumbnail_url: string | null
+  is_featured: boolean
+  is_new_arrival: boolean
+  is_bestseller: boolean
+  stock_quantity: number
+  created_at: string
+}
 
 export function ShopContent() {
   const [filters, setFilters] = useState<FilterState>({
     textures: [],
     lengths: [],
-    priceRange: [100, 300],
+    priceRange: [0, 1000000],
   })
   const [sortBy, setSortBy] = useState("featured")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [totalProducts, setTotalProducts] = useState(0)
 
-  const filteredProducts = useMemo(() => {
-    let result = [...products]
+  const fetchProducts = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams()
+      params.set('sort', sortBy)
+      params.set('pageSize', '50')
+      
+      if (filters.priceRange[0] > 0) {
+        params.set('minPrice', String(filters.priceRange[0]))
+      }
+      if (filters.priceRange[1] < 1000000) {
+        params.set('maxPrice', String(filters.priceRange[1]))
+      }
 
-    // Apply texture filter
+      const res = await fetch(`/api/products?${params.toString()}`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch products')
+      }
+      const data = await res.json()
+      setProducts(data.products || [])
+      setTotalProducts(data.pagination?.total || 0)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }, [sortBy, filters.priceRange])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
+
+  // Client-side filtering for textures and lengths (since API doesn't support multiple values)
+  const filteredProducts = products.filter((product) => {
+    // Texture filter
     if (filters.textures.length > 0) {
-      result = result.filter((p) => filters.textures.includes(p.texture))
+      const displayTexture = textureDisplayMap[product.texture] || product.texture
+      if (!filters.textures.includes(displayTexture)) {
+        return false
+      }
     }
-
-    // Apply length filter
+    
+    // Length filter
     if (filters.lengths.length > 0) {
-      result = result.filter((p) => filters.lengths.includes(p.length))
+      const productLengths = product.available_lengths.map(l => `${l}"`)
+      const hasMatchingLength = filters.lengths.some(filterLen => productLengths.includes(filterLen))
+      if (!hasMatchingLength) {
+        return false
+      }
     }
-
-    // Apply price range filter
-    result = result.filter((p) => p.price >= filters.priceRange[0] && p.price <= filters.priceRange[1])
-
-    // Apply sorting
-    switch (sortBy) {
-      case "price-low":
-        result.sort((a, b) => a.price - b.price)
-        break
-      case "price-high":
-        result.sort((a, b) => b.price - a.price)
-        break
-      case "newest":
-        result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        break
-      case "featured":
-      default:
-        result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
-        break
-    }
-
-    return result
-  }, [filters, sortBy])
+    
+    return true
+  })
 
   const activeFilterCount =
     filters.textures.length +
     filters.lengths.length +
-    (filters.priceRange[0] > 100 || filters.priceRange[1] < 300 ? 1 : 0)
+    (filters.priceRange[0] > 0 || filters.priceRange[1] < 1000000 ? 1 : 0)
 
   return (
     <section className="pb-24">
@@ -242,7 +177,19 @@ export function ShopContent() {
 
           {/* Product Grid */}
           <div className="flex-1">
-            <ProductGrid products={filteredProducts} />
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="h-10 w-10 animate-spin text-accent mb-4" />
+                <p className="text-muted-foreground">Loading products...</p>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <p className="text-destructive mb-4">{error}</p>
+                <Button onClick={fetchProducts} variant="outline">Try Again</Button>
+              </div>
+            ) : (
+              <ProductGrid products={filteredProducts} />
+            )}
           </div>
         </div>
       </div>
