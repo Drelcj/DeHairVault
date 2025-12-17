@@ -23,16 +23,18 @@ import { createClient } from "@/lib/supabase/client"
 type HeaderProps = {
   isAuthed?: boolean
   isAdmin?: boolean
+  role?: string | null
   name?: string | null
 }
 
-export function Header({ isAuthed = false, isAdmin = false }: HeaderProps) {
+export function Header({ isAuthed = false, isAdmin = false, role = null }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [isSigningOut, startTransition] = useTransition()
   const router = useRouter()
+  const adminUser = isAdmin || role === "ADMIN" || role === "SUPER_ADMIN"
 
   // Desktop dropdown state
   const [menuOpen, setMenuOpen] = useState(false)
@@ -69,6 +71,87 @@ export function Header({ isAuthed = false, isAdmin = false }: HeaderProps) {
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
   }
+
+  const AdminMenu = ({ closeMenu }: { closeMenu: () => void }) => (
+    <div className="space-y-1">
+      <Link
+        href="/admin"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        <Shield className="h-4 w-4" />
+        Dashboard
+      </Link>
+      <Link
+        href="/admin/orders"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        Orders
+      </Link>
+      <Link
+        href="/admin/products"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        Product Catalog
+      </Link>
+      <Link
+        href="/admin/inventory"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        Inventory
+      </Link>
+      <Link
+        href="/admin/users"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        Customers
+      </Link>
+      <Link
+        href="/admin/returns"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        Returns
+      </Link>
+    </div>
+  )
+
+  const CustomerMenu = ({ closeMenu }: { closeMenu: () => void }) => (
+    <div className="space-y-1">
+      <Link
+        href="/account"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        My Account
+      </Link>
+      <Link
+        href="/account/orders"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        Orders
+      </Link>
+      <Link
+        href="/account/inbox"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        Inbox
+      </Link>
+      <Link
+        href="/account/wishlist"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+        onClick={closeMenu}
+      >
+        Wishlist
+      </Link>
+    </div>
+  )
 
   return (
     <header
@@ -165,93 +248,18 @@ export function Header({ isAuthed = false, isAdmin = false }: HeaderProps) {
                     className="absolute right-0 mt-2 w-72 rounded-lg border border-border bg-card shadow-md focus:outline-none"
                   >
                     <div className="p-2">
-                      {/* Section 1: Admin Actions (admin only) */}
-                      {isAdmin && (
+                      {adminUser ? (
                         <>
-                          <p className="px-3 py-2 text-xs font-medium text-muted-foreground">Admin Control</p>
-                          <div className="space-y-1">
-                            <Link
-                              href="/admin"
-                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                              onClick={() => setMenuOpen(false)}
-                            >
-                              <Shield className="h-4 w-4" />
-                              Dashboard
-                            </Link>
-                            <Link
-                              href="/admin/orders"
-                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                              onClick={() => setMenuOpen(false)}
-                            >
-                              Orders
-                            </Link>
-                            <Link
-                              href="/admin/products"
-                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                              onClick={() => setMenuOpen(false)}
-                            >
-                              Product Catalog
-                            </Link>
-                            <Link
-                              href="/admin/inventory"
-                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                              onClick={() => setMenuOpen(false)}
-                            >
-                              Inventory
-                            </Link>
-                            <Link
-                              href="/admin/users"
-                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                              onClick={() => setMenuOpen(false)}
-                            >
-                              Customers
-                            </Link>
-                            <Link
-                              href="/admin/returns"
-                              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                              onClick={() => setMenuOpen(false)}
-                            >
-                              Returns
-                            </Link>
-                          </div>
-                          <div className="my-2 border-t border-border" />
+                          <p className="px-3 py-2 text-xs font-medium text-muted-foreground">Admin</p>
+                          <AdminMenu closeMenu={() => setMenuOpen(false)} />
+                        </>
+                      ) : (
+                        <>
+                          <p className="px-3 py-2 text-xs font-medium text-muted-foreground">My Shopping</p>
+                          <CustomerMenu closeMenu={() => setMenuOpen(false)} />
                         </>
                       )}
 
-                      {/* Section 2: Customer Actions (all authed) */}
-                      <p className="px-3 py-2 text-xs font-medium text-muted-foreground">My Shopping</p>
-                      <div className="space-y-1">
-                        <Link
-                          href="/account"
-                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          My Account
-                        </Link>
-                        <Link
-                          href="/account/orders"
-                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          Orders
-                        </Link>
-                        <Link
-                          href="/account/inbox"
-                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          Inbox
-                        </Link>
-                        <Link
-                          href="/account/wishlist"
-                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          Wishlist
-                        </Link>
-                      </div>
-
-                      {/* Section 3: Session */}
                       <div className="my-2 border-t border-border" />
                       <button
                         className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
@@ -319,85 +327,12 @@ export function Header({ isAuthed = false, isAdmin = false }: HeaderProps) {
                 </Link>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {/* Customer actions */}
-                  <Link
-                    href="/account"
-                    className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    My Account
-                  </Link>
-                  <Link
-                    href="/account/orders"
-                    className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Orders
-                  </Link>
-                  <Link
-                    href="/account/inbox"
-                    className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Inbox
-                  </Link>
-                  <Link
-                    href="/account/wishlist"
-                    className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Wishlist
-                  </Link>
-
-                  {/* Admin actions (admin only) */}
-                  {isAdmin && (
-                    <>
-                      <Link
-                        href="/admin"
-                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Admin Dashboard
-                      </Link>
-                      <Link
-                        href="/admin/orders"
-                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Admin Orders
-                      </Link>
-                      <Link
-                        href="/admin/products"
-                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Product Catalog
-                      </Link>
-                      <Link
-                        href="/admin/inventory"
-                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Inventory
-                      </Link>
-                      <Link
-                        href="/admin/users"
-                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Customers
-                      </Link>
-                      <Link
-                        href="/admin/returns"
-                        className="text-lg font-medium text-foreground hover:text-accent transition-colors"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Returns
-                      </Link>
-                    </>
+                  {adminUser ? (
+                    <AdminMenu closeMenu={() => setIsMobileMenuOpen(false)} />
+                  ) : (
+                    <CustomerMenu closeMenu={() => setIsMobileMenuOpen(false)} />
                   )}
 
-                  {/* Session */}
                   <button
                     className="flex items-center gap-2 text-left text-lg font-medium text-foreground hover:text-accent transition-colors"
                     onClick={() => {
