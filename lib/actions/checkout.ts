@@ -117,8 +117,8 @@ export async function createOrder(
     const orderData: OrderInsert = {
       order_number: orderNumber,
       user_id: user?.id || null,
-      order_type: OrderType.REGULAR,
-      status: OrderStatus.PENDING,
+      order_type: 'REGULAR' as OrderType,
+      status: 'PENDING' as OrderStatus,
       customer_email: formData.customerEmail,
       customer_name: formData.customerName,
       customer_phone: formData.customerPhone,
@@ -181,8 +181,13 @@ export async function createOrder(
       .single()
 
     if (orderError || !order) {
-      console.error('Error creating order:', orderError)
-      return { success: false, error: 'Failed to create order' }
+      console.error('Order creation error:', {
+        message: orderError?.message,
+        code: orderError?.code,
+        details: orderError?.details,
+        hint: orderError?.hint,
+      })
+      return { success: false, error: `Failed to create order: ${orderError?.message || 'Unknown error'}` }
     }
 
     // Insert order items
