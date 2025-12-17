@@ -32,38 +32,47 @@ function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
     setIsLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password,
-    })
+    try {
+      const supabase = createClient()
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      })
 
-    if (signInError) {
-      setError(signInError.message)
+      if (signInError) {
+        setError(signInError.message)
+        setIsLoading(false)
+        return
+      }
+
+      const user = data.user
+      if (!user) {
+        setError("Unable to sign in. Please try again.")
+        setIsLoading(false)
+        return
+      }
+
+      // Fetch user role to determine redirect destination
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single<{ role: string }>()
+
+      let destination = redirectTo
+      if (profile?.role === "ADMIN" || profile?.role === "SUPER_ADMIN") {
+        destination = "/admin"
+      }
+
+      // Refresh the router and navigate
+      router.refresh()
+      // Use window.location for a hard navigation to ensure session is properly loaded
+      window.location.href = destination
+    } catch (err) {
+      console.error('Login error:', err)
+      setError("An unexpected error occurred. Please try again.")
       setIsLoading(false)
-      return
     }
-
-    const user = data.user
-    if (!user) {
-      setError("Unable to sign in. Please try again.")
-      setIsLoading(false)
-      return
-    }
-
-    let destination = redirectTo
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single<{ role: string }>()
-
-    if (profile?.role === "ADMIN" || profile?.role === "SUPER_ADMIN") {
-      destination = redirectTo === "/" ? "/admin" : redirectTo
-    }
-
-    router.refresh()
-    router.push(destination)
   }
 
   return (
