@@ -47,6 +47,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
   const images = product.images.length > 0 ? product.images : [product.thumbnail_url || '']
   const currentImage = images[selectedImageIndex] || ''
+  const fallbackImage = '/placeholder.jpg'
 
   return (
     <div className="container mx-auto px-6 lg:px-12 py-12">
@@ -65,7 +66,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           {/* Main Image */}
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-secondary">
             <Image
-              src={currentImage || `/.jpg?height=800&width=600&query=${encodeURIComponent(product.name)}`}
+              src={currentImage || fallbackImage}
               alt={product.name}
               fill
               className="object-cover"
@@ -103,7 +104,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   )}
                 >
                   <Image
-                    src={image || `/.jpg?height=200&width=200&query=${encodeURIComponent(product.name)}`}
+                    src={image || fallbackImage}
                     alt={`${product.name} - View ${index + 1}`}
                     fill
                     className="object-cover"

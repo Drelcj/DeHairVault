@@ -48,7 +48,7 @@ export async function getProducts(filters?: ProductFilters): Promise<Product[]> 
       return []
     }
 
-    // Apply length filter (needs to be done client-side as it's an array field)
+    // Apply length filter (done server-side as array filtering requires post-query processing)
     let products = data || []
     if (filters?.lengths && filters.lengths.length > 0) {
       products = products.filter((product) => {

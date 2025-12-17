@@ -35,6 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   // Get the display image (thumbnail or first image)
   const imageUrl = product.thumbnail_url || product.images[0] || ''
+  const fallbackImage = '/placeholder.jpg'
   
   // Format length range for display
   const lengthDisplay = product.available_lengths.length > 0
@@ -51,7 +52,7 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Image Container */}
           <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-secondary via-muted to-secondary">
             <Image
-              src={imageUrl || `/.jpg?height=500&width=375&query=${encodeURIComponent(product.name)}`}
+              src={imageUrl || fallbackImage}
               alt={product.name}
               fill
               className={cn("object-cover transition-transform duration-700", isHovered ? "scale-110" : "scale-100")}
@@ -78,10 +79,11 @@ export function ProductCard({ product }: ProductCardProps) {
             <button
               onClick={(e) => {
                 e.preventDefault()
+                e.stopPropagation()
                 setIsWishlisted(!isWishlisted)
               }}
               className={cn(
-                "absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300",
+                "absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 z-10",
                 isWishlisted
                   ? "bg-accent text-accent-foreground"
                   : "bg-background/80 backdrop-blur-sm text-foreground hover:bg-accent hover:text-accent-foreground",
@@ -93,12 +95,16 @@ export function ProductCard({ product }: ProductCardProps) {
             {/* Quick Add Button */}
             <div
               className={cn(
-                "absolute bottom-4 left-4 right-4 transition-all duration-500",
+                "absolute bottom-4 left-4 right-4 transition-all duration-500 z-10",
                 isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
               )}
             >
               <Button
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  // TODO: Implement cart functionality
+                }}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 rounded-lg font-medium"
               >
                 <ShoppingBag className="h-4 w-4" />
