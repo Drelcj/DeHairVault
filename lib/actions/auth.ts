@@ -5,6 +5,15 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
 export async function loginAction(email: string, password: string) {
+  // Basic input validation
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    return { error: 'Please provide a valid email address.' }
+  }
+
+  if (!password || typeof password !== 'string' || password.length < 6) {
+    return { error: 'Password must be at least 6 characters.' }
+  }
+
   const supabase = await createClient()
 
   const { data, error: signInError } = await supabase.auth.signInWithPassword({

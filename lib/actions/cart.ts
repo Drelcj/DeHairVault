@@ -4,6 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import type { CartItem, Product } from '@/types/database.types'
 
+// Cart expiration periods
+const AUTHENTICATED_CART_EXPIRY_DAYS = 30
+const GUEST_CART_EXPIRY_DAYS = 7
+
 export interface CartItemWithProduct extends CartItem {
   product: Product
 }
@@ -33,7 +37,7 @@ async function getOrCreateUserCart(userId: string) {
 
   // Create new cart
   const expiresAt = new Date()
-  expiresAt.setDate(expiresAt.getDate() + 30) // 30 days for authenticated users
+  expiresAt.setDate(expiresAt.getDate() + AUTHENTICATED_CART_EXPIRY_DAYS)
 
   const { data: newCart, error } = await supabase
     .from('carts')
@@ -69,7 +73,7 @@ export async function getOrCreateGuestCart(sessionId: string) {
 
   // Create new cart
   const expiresAt = new Date()
-  expiresAt.setDate(expiresAt.getDate() + 7) // 7 days for guest carts
+  expiresAt.setDate(expiresAt.getDate() + GUEST_CART_EXPIRY_DAYS)
 
   const { data: newCart, error } = await supabase
     .from('carts')

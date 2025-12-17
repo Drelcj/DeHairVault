@@ -4,6 +4,9 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/contexts/cart-context'
 
+// TODO: Replace with actual shipping calculation based on location and weight
+const ESTIMATED_SHIPPING_NGN = 2000
+
 function formatPrice(priceNgn: number): string {
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
@@ -20,7 +23,7 @@ export function CartSummary() {
   }
 
   const subtotal = cart.subtotalNgn
-  const estimatedShipping = 2000 // Placeholder - would be calculated based on location
+  const estimatedShipping = ESTIMATED_SHIPPING_NGN
   const total = subtotal + estimatedShipping
 
   return (
