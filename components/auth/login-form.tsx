@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, Suspense, useTransition } from "react"
+import { useState, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { loginAction } from "@/lib/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 
 type LoginFormProps = {
   redirectTo?: string
@@ -18,7 +18,7 @@ type LoginFormProps = {
 
 function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -29,22 +29,50 @@ function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
     setError(null)
 
-    startTransition(async () => {
-      const result = await loginAction(formData.email, formData.password, redirectTo)
-      
-      if (!result.success) {
-        setError(result.error || "Unable to sign in. Please try again.")
+    try {
+      const supabase = createClient()
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      })
+
+      if (signInError) {
+        setError(signInError.message)
+        setIsLoading(false)
         return
       }
 
-      // Redirect to the appropriate destination
-      if (result.redirectTo) {
-        router.push(result.redirectTo)
-        router.refresh()
+      const user = data.user
+      if (!user) {
+        setError("Unable to sign in. Please try again.")
+        setIsLoading(false)
+        return
       }
-    })
+
+      // Fetch user role to determine redirect destination
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single<{ role: string }>()
+
+      let destination = redirectTo
+      if (profile?.role === "ADMIN" || profile?.role === "SUPER_ADMIN") {
+        destination = "/admin"
+      }
+
+      // Refresh the router and navigate
+      router.refresh()
+      // Use window.location for a hard navigation to ensure session is properly loaded
+      window.location.href = destination
+    } catch (err) {
+      console.error('Login error:', err)
+      setError("An unexpected error occurred. Please try again.")
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -139,10 +167,10 @@ function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
               {/* Submit Button */}
               <Button
                 type="submit"
-                disabled={isPending}
+                disabled={isLoading}
                 className="w-full h-12 bg-gradient-to-r from-accent to-primary hover:opacity-90 text-accent-foreground font-medium text-base transition-all duration-300"
               >
-                {isPending ? "Signing in..." : "Sign In"}
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
 
               {error && (

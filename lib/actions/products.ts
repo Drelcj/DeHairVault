@@ -16,6 +16,12 @@ export async function getProducts(filters?: ProductFilters): Promise<Product[]> 
   try {
     const supabase = await createClient()
     
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error('Supabase environment variables not configured')
+      return []
+    }
+    
     let query = supabase
       .from('products')
       .select('*')
@@ -56,6 +62,7 @@ export async function getProducts(filters?: ProductFilters): Promise<Product[]> 
       })
     }
 
+    console.log(`Fetched ${products.length} products from database`)
     return products
   } catch (error) {
     console.error('Error in getProducts:', error)
