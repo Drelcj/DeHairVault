@@ -132,13 +132,19 @@ export async function addToCart(
     }
 
     // Check if item already exists in cart
-    const { data: existingItem } = await supabase
+    let existingItemQuery = supabase
       .from('cart_items')
       .select('id, quantity')
       .eq('cart_id', cartId)
       .eq('product_id', productId)
-      .eq('selected_length', selectedLength)
-      .single()
+
+    if (selectedLength !== null) {
+      existingItemQuery = existingItemQuery.eq('selected_length', selectedLength)
+    } else {
+      existingItemQuery = existingItemQuery.is('selected_length', null)
+    }
+
+    const { data: existingItem } = await existingItemQuery.single()
 
     if (existingItem) {
       // Update quantity
@@ -369,13 +375,19 @@ export async function mergeGuestCart(
     if (guestItems && guestItems.length > 0) {
       // For each guest item, add to user cart or update quantity
       for (const item of guestItems) {
-        const { data: existingItem } = await supabase
+        let existingItemQuery = supabase
           .from('cart_items')
           .select('id, quantity')
           .eq('cart_id', userCartId)
           .eq('product_id', item.product_id)
-          .eq('selected_length', item.selected_length)
-          .single()
+
+        if (item.selected_length !== null) {
+          existingItemQuery = existingItemQuery.eq('selected_length', item.selected_length)
+        } else {
+          existingItemQuery = existingItemQuery.is('selected_length', null)
+        }
+
+        const { data: existingItem } = await existingItemQuery.single()
 
         if (existingItem) {
           // Update quantity
