@@ -19,6 +19,7 @@ import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { useCart } from "@/contexts/cart-context"
 
 type HeaderProps = {
   isAuthed?: boolean
@@ -35,6 +36,7 @@ export function Header({ isAuthed = false, isAdmin = false, role = null }: Heade
   const [isSigningOut, startTransition] = useTransition()
   const router = useRouter()
   const adminUser = isAdmin || role === "ADMIN" || role === "SUPER_ADMIN"
+  const { openCart, cart } = useCart()
 
   // Desktop dropdown state
   const [menuOpen, setMenuOpen] = useState(false)
@@ -209,11 +211,18 @@ export function Header({ isAuthed = false, isAdmin = false, role = null }: Heade
             )}
 
             {/* Cart */}
-            <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full hover:bg-secondary relative"
+              onClick={openCart}
+            >
               <ShoppingBag className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent text-accent-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                0
-              </span>
+              {cart && cart.itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-accent text-accent-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {cart.itemCount}
+                </span>
+              )}
               <span className="sr-only">Cart</span>
             </Button>
 

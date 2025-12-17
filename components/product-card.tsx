@@ -6,6 +6,9 @@ import Link from "next/link"
 import { ShoppingBag, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { addToCart } from "@/lib/actions/cart"
+import { useCart } from "@/contexts/cart-context"
+import { toast } from "sonner"
 import type { Product } from "@/types/database.types"
 
 interface ProductCardProps {
@@ -32,6 +35,8 @@ function formatTexture(texture: string): string {
 export function ProductCard({ product }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isWishlisted, setIsWishlisted] = useState(false)
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const { refreshCart, openCart, sessionId } = useCart()
 
   // Get the display image (thumbnail or first image)
   const imageUrl = product.thumbnail_url || product.images[0] || ''
@@ -43,6 +48,40 @@ export function ProductCard({ product }: ProductCardProps) {
       ? `${product.available_lengths[0]}"`
       : `${Math.min(...product.available_lengths)}" - ${Math.max(...product.available_lengths)}"`
     : 'Various'
+
+  // Get default length for cart (smallest available)
+  const defaultLength = product.available_lengths.length > 0 
+    ? Math.min(...product.available_lengths) 
+    : null
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (!sessionId) {
+      toast.error('Unable to add to cart. Please try again.')
+      return
+    }
+
+    setIsAddingToCart(true)
+    try {
+      const result = await addToCart(product.id, 1, defaultLength, sessionId)
+      
+      if (result.success) {
+        await refreshCart()
+        toast.success(`${product.name} added to cart!`)
+        // Open cart to show the added item
+        openCart()
+      } else {
+        toast.error(result.error || 'Failed to add to cart')
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast.error('Failed to add to cart')
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
 
   return (
     <Link href={`/shop/${product.slug}`} className="block">
@@ -100,15 +139,12 @@ export function ProductCard({ product }: ProductCardProps) {
               )}
             >
               <Button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  // TODO: Implement cart functionality
-                }}
+                onClick={handleAddToCart}
+                disabled={isAddingToCart}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 rounded-lg font-medium"
               >
                 <ShoppingBag className="h-4 w-4" />
-                Add to Bag
+                {isAddingToCart ? 'Adding...' : 'Add to Bag'}
               </Button>
             </div>
           </div>

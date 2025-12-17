@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { createClient } from "@/lib/supabase/client"
+import { loginAction } from "@/lib/actions/auth"
 
 type LoginFormProps = {
   redirectTo?: string
@@ -33,41 +33,18 @@ function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
     setError(null)
 
     try {
-      const supabase = createClient()
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      })
+      const result = await loginAction(formData.email, formData.password)
 
-      if (signInError) {
-        setError(signInError.message)
+      if (result.error) {
+        setError(result.error)
         setIsLoading(false)
         return
       }
 
-      const user = data.user
-      if (!user) {
-        setError("Unable to sign in. Please try again.")
-        setIsLoading(false)
-        return
+      if (result.success && result.destination) {
+        // Use window.location for a hard navigation to ensure session is properly loaded
+        window.location.href = result.destination
       }
-
-      // Fetch user role to determine redirect destination
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .single<{ role: string }>()
-
-      let destination = redirectTo
-      if (profile?.role === "ADMIN" || profile?.role === "SUPER_ADMIN") {
-        destination = "/admin"
-      }
-
-      // Refresh the router and navigate
-      router.refresh()
-      // Use window.location for a hard navigation to ensure session is properly loaded
-      window.location.href = destination
     } catch (err) {
       console.error('Login error:', err)
       setError("An unexpected error occurred. Please try again.")
