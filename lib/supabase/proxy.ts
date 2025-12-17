@@ -69,10 +69,11 @@ export async function updateSession(request: NextRequest) {
     type UserRoleData = { role: string } | null;
     const typedUserData = userData as UserRoleData;
 
-    if (!typedUserData || userError || typedUserData.role !== 'ADMIN') {
-      // Redirect to home if not admin
+    if (!typedUserData || userError || (typedUserData.role !== 'ADMIN' && typedUserData.role !== 'SUPER_ADMIN')) {
+      // Redirect to login if not admin or super admin
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/';
+      redirectUrl.pathname = '/login';
+      redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
       return NextResponse.redirect(redirectUrl);
     }
   }
