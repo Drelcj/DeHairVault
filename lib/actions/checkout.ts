@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { OrderInsert, OrderItemInsert, OrderType, OrderStatus } from '@/types/database.types'
 import { getCart, clearCart } from './cart'
 
@@ -76,6 +76,7 @@ export async function createOrder(
   formData: CheckoutFormData
 ): Promise<OrderResult> {
   try {
+    // Use regular client to verify user is authenticated
     const supabase = await createClient()
 
     // Get current user - REQUIRED
@@ -176,8 +177,11 @@ export async function createOrder(
       cancellation_reason: null,
     }
 
+    // Use service role client for database writes (bypasses RLS)
+    const serviceSupabase = createServiceClient()
+
     // Insert order
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await serviceSupabase
       .from('orders')
       .insert(orderData)
       .select()
@@ -217,12 +221,12 @@ export async function createOrder(
       },
     }))
 
-    const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
+    const { error: itemsError } = await serviceSupabase.from('order_items').insert(orderItems)
 
     if (itemsError) {
       console.error('Error creating order items:', itemsError)
       // Rollback order creation
-      await supabase.from('orders').delete().eq('id', order.id)
+      await serviceSupabase.from('orders').delete().eq('id', order.id)
       return { success: false, error: 'Failed to create order items' }
     }
 
@@ -373,7 +377,8 @@ export async function updateOrderStatus(
   paymentMetadata?: Record<string, any>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createClient()
+    // Use service role client for webhook operations (no user session available)
+    const serviceSupabase = createServiceClient()
 
     const updateData: any = {
       status,
@@ -389,7 +394,7 @@ export async function updateOrderStatus(
       updateData.payment_metadata = paymentMetadata
     }
 
-    const { error } = await supabase.from('orders').update(updateData).eq('id', orderId)
+    const { error } = await serviceSupabase.from('orders').update(updateData).eq('id', orderId)
 
     if (error) {
       console.error('Error updating order status:', error)
@@ -399,7 +404,7 @@ export async function updateOrderStatus(
     // If payment successful, reduce stock for tracked inventory items
     if (paymentStatus === 'paid') {
       // Get order items
-      const { data: orderItems } = await supabase
+      const { data: orderItems } = await serviceSupabase
         .from('order_items')
         .select('product_id, quantity')
         .eq('order_id', orderId)
@@ -408,7 +413,7 @@ export async function updateOrderStatus(
         for (const item of orderItems) {
           if (item.product_id) {
             // Get current stock
-            const { data: product } = await supabase
+            const { data: product } = await serviceSupabase
               .from('products')
               .select('stock_quantity, track_inventory')
               .eq('id', item.product_id)
@@ -417,7 +422,7 @@ export async function updateOrderStatus(
             if (product && product.track_inventory) {
               // Reduce stock
               const newStock = Math.max(0, product.stock_quantity - item.quantity)
-              await supabase
+              await serviceSupabase
                 .from('products')
                 .update({ stock_quantity: newStock })
                 .eq('id', item.product_id)
@@ -440,10 +445,11 @@ export async function clearCartAfterOrder(
   orderId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createClient()
+    // Use service role client for webhook operations (no user session available)
+    const serviceSupabase = createServiceClient()
 
     // Get order to find user_id or session_id from order metadata
-    const { data: order } = await supabase
+    const { data: order } = await serviceSupabase
       .from('orders')
       .select('user_id')
       .eq('id', orderId)
@@ -454,7 +460,7 @@ export async function clearCartAfterOrder(
     }
 
     // Find and clear the cart
-    let cartQuery = supabase.from('carts').select('id')
+    let cartQuery = serviceSupabase.from('carts').select('id')
 
     if (order.user_id) {
       cartQuery = cartQuery.eq('user_id', order.user_id).is('session_id', null)
@@ -464,7 +470,7 @@ export async function clearCartAfterOrder(
 
     if (cart) {
       // Delete all cart items
-      await supabase.from('cart_items').delete().eq('cart_id', cart.id)
+      await serviceSupabase.from('cart_items').delete().eq('cart_id', cart.id)
     }
 
     revalidatePath('/', 'layout')

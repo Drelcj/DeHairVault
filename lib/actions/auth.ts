@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export async function loginAction(email: string, password: string) {
+export async function loginAction(email: string, password: string, redirectTo?: string) {
   // Basic input validation
   if (!email || typeof email !== 'string' || !email.includes('@')) {
     return { error: 'Please provide a valid email address.' }
@@ -37,7 +37,9 @@ export async function loginAction(email: string, password: string) {
     .eq('id', user.id)
     .single<{ role: string }>()
 
-  let destination = '/'
+  // Admin users always go to admin dashboard
+  // Other users go to redirectTo or homepage
+  let destination = redirectTo || '/'
   if (profile?.role === 'ADMIN' || profile?.role === 'SUPER_ADMIN') {
     destination = '/admin'
   }
