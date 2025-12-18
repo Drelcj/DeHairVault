@@ -1,15 +1,25 @@
 import { redirect } from 'next/navigation'
+import { HeaderShell } from '@/components/header-shell'
+import { Footer } from '@/components/footer'
+import { getSessionUser } from '@/lib/auth/session'
 import { getCart } from '@/lib/actions/cart'
-import { cookies } from 'next/headers'
 import { CheckoutForm } from '@/components/checkout/checkout-form'
 
-export default async function CheckoutPage() {
-  // Get session ID from cookie or localStorage will be used on client side
-  const cookieStore = await cookies()
-  const sessionId = cookieStore.get('guest_session_id')?.value || null
+export const metadata = {
+  title: 'Checkout | Dehair Vault',
+  description: 'Complete your order securely',
+}
 
-  // Fetch cart
-  const cart = await getCart(sessionId || undefined)
+export default async function CheckoutPage() {
+  // Require authentication
+  const session = await getSessionUser()
+  
+  if (!session?.user) {
+    redirect('/login?redirectTo=/checkout')
+  }
+
+  // Fetch cart for authenticated user
+  const cart = await getCart()
 
   // Redirect to shop if cart is empty
   if (!cart || cart.items.length === 0) {
@@ -17,17 +27,29 @@ export default async function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Checkout</h1>
-          <p className="mt-2 text-gray-600">
-            Complete your order and proceed to payment
+    <main className="min-h-screen bg-background">
+      <HeaderShell />
+      
+      {/* Checkout Hero/Header Section */}
+      <section className="pt-32 pb-12 bg-gradient-to-b from-secondary/50 to-background">
+        <div className="container mx-auto px-6 lg:px-12">
+          <h1 className="font-[family-name:var(--font-playfair)] text-4xl lg:text-5xl font-medium text-foreground">
+            Checkout
+          </h1>
+          <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
+            Complete your order and prepare to receive your luxury hair
           </p>
         </div>
+      </section>
 
-        <CheckoutForm cart={cart} sessionId={sessionId} />
-      </div>
-    </div>
+      {/* Checkout Content */}
+      <section className="py-12">
+        <div className="container mx-auto px-6 lg:px-12">
+          <CheckoutForm cart={cart} />
+        </div>
+      </section>
+
+      <Footer />
+    </main>
   )
 }
