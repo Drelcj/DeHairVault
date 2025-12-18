@@ -1,7 +1,7 @@
 // Server-Side Supabase Client
 // Use this client in Server Components, API routes, and server actions
 
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/types/database.types';
 
@@ -33,6 +33,7 @@ export async function createClient() {
 }
 
 // Service role client for admin operations (use with caution)
+// This client bypasses RLS and should only be used for trusted server-side operations
 export function createServiceClient() {
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,6 +44,10 @@ export function createServiceClient() {
           return [];
         },
         setAll() {},
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
   );

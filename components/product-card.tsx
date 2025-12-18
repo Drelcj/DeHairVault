@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ShoppingBag, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -36,7 +37,8 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
-  const { refreshCart, openCart, sessionId } = useCart()
+  const { refreshCart, openCart } = useCart()
+  const router = useRouter()
 
   // Get the display image (thumbnail or first image)
   const imageUrl = product.thumbnail_url || product.images[0] || ''
@@ -57,21 +59,19 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
-    if (!sessionId) {
-      toast.error('Unable to add to cart. Please try again.')
-      return
-    }
 
     setIsAddingToCart(true)
     try {
-      const result = await addToCart(product.id, 1, defaultLength, sessionId)
+      const result = await addToCart(product.id, 1, defaultLength)
       
       if (result.success) {
         await refreshCart()
         toast.success(`${product.name} added to cart!`)
         // Open cart to show the added item
         openCart()
+      } else if (result.requiresAuth) {
+        toast.info('Please log in to add items to your cart')
+        router.push('/login?redirect=' + encodeURIComponent('/shop'))
       } else {
         toast.error(result.error || 'Failed to add to cart')
       }

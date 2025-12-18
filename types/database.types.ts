@@ -421,69 +421,83 @@ export interface Database {
         Row: User;
         Insert: UserInsert;
         Update: UserUpdate;
+        Relationships: [];
       };
       products: {
         Row: Product;
         Insert: ProductInsert;
         Update: ProductUpdate;
+        Relationships: [];
       };
       product_variants: {
         Row: ProductVariant;
         Insert: ProductVariantInsert;
         Update: ProductVariantUpdate;
+        Relationships: [];
       };
       carts: {
         Row: Cart;
         Insert: CartInsert;
         Update: CartUpdate;
+        Relationships: [];
       };
       cart_items: {
         Row: CartItem;
         Insert: CartItemInsert;
         Update: CartItemUpdate;
+        Relationships: [];
       };
       orders: {
         Row: Order;
         Insert: OrderInsert;
         Update: OrderUpdate;
+        Relationships: [];
       };
       order_items: {
         Row: OrderItem;
         Insert: OrderItemInsert;
         Update: OrderItemUpdate;
+        Relationships: [];
       };
       exchange_rates: {
         Row: ExchangeRate;
         Insert: ExchangeRateInsert;
         Update: ExchangeRateUpdate;
+        Relationships: [];
       };
       coupons: {
         Row: Coupon;
         Insert: CouponInsert;
         Update: CouponUpdate;
+        Relationships: [];
       };
       wishlists: {
         Row: Wishlist;
         Insert: WishlistInsert;
         Update: never;
+        Relationships: [];
       };
       product_reviews: {
         Row: ProductReview;
         Insert: ProductReviewInsert;
         Update: ProductReviewUpdate;
+        Relationships: [];
       };
       admin_activity_log: {
         Row: AdminActivityLog;
         Insert: AdminActivityLogInsert;
         Update: never;
+        Relationships: [];
       };
     };
     Views: {
       v_products_with_stock: {
         Row: ProductWithStock;
+        Relationships: [];
       };
       v_order_summary: {
         Row: OrderSummary;
+        Relationships: [];
       };
     };
     Functions: {
@@ -498,6 +512,19 @@ export interface Database {
         };
         Returns: number;
       };
+    };
+    Enums: {
+      hair_grade: 'GRADE_A' | 'GRADE_B' | 'GRADE_C' | 'GRADE_D';
+      hair_texture: 'STRAIGHT' | 'BODY_WAVE' | 'LOOSE_WAVE' | 'DEEP_WAVE' | 'WATER_WAVE' | 'KINKY_CURLY' | 'JERRY_CURL' | 'LOOSE_DEEP' | 'NATURAL_WAVE';
+      hair_origin: 'VIETNAM' | 'PHILIPPINES' | 'INDIA' | 'BURMA' | 'CAMBODIA' | 'CHINA';
+      hair_category: 'BUNDLES' | 'CLOSURE' | 'FRONTAL' | 'WIG' | 'PONYTAIL' | 'CLIP_INS';
+      draw_type: 'SINGLE_DRAWN' | 'DOUBLE_DRAWN' | 'SUPER_DOUBLE_DRAWN';
+      order_status: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
+      order_type: 'REGULAR' | 'PRE_ORDER' | 'WHOLESALE';
+      user_role: 'CUSTOMER' | 'ADMIN' | 'SUPER_ADMIN';
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }

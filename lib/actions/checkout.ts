@@ -177,17 +177,17 @@ export async function createOrder(
       cancellation_reason: null,
     }
 
-    // Use service role client for database writes (bypasses RLS)
-    const serviceSupabase = createServiceClient()
+    // Use the authenticated user's client with RLS policies
+    // (Policies allow users to create their own orders)
 
     // Insert order
-    const { data: order, error: orderError } = await serviceSupabase
+    const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert(orderData)
+      .insert(orderData as any)
       .select()
       .single()
 
-    if (orderError || !order) {
+    if (orderError) {
       console.error('Order creation error:', {
         message: orderError?.message,
         code: orderError?.code,
@@ -197,41 +197,60 @@ export async function createOrder(
       return { success: false, error: `Failed to create order: ${orderError?.message || 'Unknown error'}` }
     }
 
-    // Insert order items
-    const orderItems: OrderItemInsert[] = cart.items.map((item) => ({
-      order_id: order.id,
-      product_id: item.product_id,
-      variant_id: item.variant_id,
-      product_name: item.product.name,
-      product_grade: item.product.grade,
-      product_texture: item.product.texture,
-      product_origin: item.product.origin,
-      selected_length: item.selected_length,
-      quantity: item.quantity,
-      unit_price_ngn: item.unit_price_ngn,
-      total_price_ngn: item.unit_price_ngn * item.quantity,
-      fulfilled_quantity: 0,
-      product_snapshot: {
-        name: item.product.name,
-        description: item.product.description,
-        images: item.product.images,
-        grade: item.product.grade,
-        texture: item.product.texture,
-        origin: item.product.origin,
-      },
-    }))
+    if (!order) {
+      return { success: false, error: 'Failed to create order: No data returned' }
+    }
 
-    const { error: itemsError } = await serviceSupabase.from('order_items').insert(orderItems)
+    // Insert order items - validate product data exists
+    const orderItems: OrderItemInsert[] = []
+    for (const item of cart.items) {
+      // Ensure product data exists
+      if (!item.product) {
+        console.error('Missing product data for cart item:', item.id)
+        await supabase.from('orders').delete().eq('id', (order as any).id)
+        return { success: false, error: 'Product data missing for one or more cart items' }
+      }
+
+      orderItems.push({
+        order_id: (order as any).id,
+        product_id: item.product_id,
+        variant_id: item.variant_id || null,
+        product_name: item.product.name,
+        product_grade: item.product.grade,
+        product_texture: item.product.texture,
+        product_origin: item.product.origin,
+        selected_length: item.selected_length,
+        quantity: item.quantity,
+        unit_price_ngn: item.unit_price_ngn,
+        total_price_ngn: item.unit_price_ngn * item.quantity,
+        fulfilled_quantity: 0,
+        product_snapshot: {
+          name: item.product.name,
+          description: item.product.description,
+          images: item.product.images,
+          grade: item.product.grade,
+          texture: item.product.texture,
+          origin: item.product.origin,
+        },
+      })
+    }
+
+    const { error: itemsError } = await supabase.from('order_items').insert(orderItems as any)
 
     if (itemsError) {
-      console.error('Error creating order items:', itemsError)
+      console.error('Error creating order items:', {
+        message: itemsError?.message,
+        code: itemsError?.code,
+        details: itemsError?.details,
+        hint: itemsError?.hint,
+      })
       // Rollback order creation
-      await serviceSupabase.from('orders').delete().eq('id', order.id)
-      return { success: false, error: 'Failed to create order items' }
+      await supabase.from('orders').delete().eq('id', (order as any).id)
+      return { success: false, error: `Failed to create order items: ${itemsError?.message || 'Unknown error'}` }
     }
 
     revalidatePath('/checkout')
-    return { success: true, orderId: order.id, orderNumber: order.order_number }
+    return { success: true, orderId: (order as any).id, orderNumber: (order as any).order_number }
   } catch (error) {
     console.error('Error in createOrder:', error)
     return { success: false, error: 'An unexpected error occurred' }
@@ -314,53 +333,56 @@ export async function applyCoupon(
       return { success: false, error: 'Invalid coupon code' }
     }
 
+    // Cast coupon to any to avoid type issues with Supabase SSR client
+    const couponData = coupon as any
+
     // Check if coupon is expired
-    if (coupon.expires_at) {
-      const expiryDate = new Date(coupon.expires_at)
+    if (couponData.expires_at) {
+      const expiryDate = new Date(couponData.expires_at)
       if (expiryDate < new Date()) {
         return { success: false, error: 'Coupon has expired' }
       }
     }
 
     // Check if coupon has started
-    if (coupon.starts_at) {
-      const startDate = new Date(coupon.starts_at)
+    if (couponData.starts_at) {
+      const startDate = new Date(couponData.starts_at)
       if (startDate > new Date()) {
         return { success: false, error: 'Coupon is not yet active' }
       }
     }
 
     // Check minimum order value
-    if (coupon.minimum_order_ngn && cartTotal < coupon.minimum_order_ngn) {
+    if (couponData.minimum_order_ngn && cartTotal < couponData.minimum_order_ngn) {
       return {
         success: false,
-        error: `Minimum order value is NGN ${coupon.minimum_order_ngn}`,
+        error: `Minimum order value is NGN ${couponData.minimum_order_ngn}`,
       }
     }
 
     // Check usage limit
-    if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+    if (couponData.usage_limit && couponData.usage_count >= couponData.usage_limit) {
       return { success: false, error: 'Coupon usage limit reached' }
     }
 
     // Calculate discount
     let discountNgn = 0
-    if (coupon.discount_type === 'percentage') {
-      discountNgn = (cartTotal * coupon.discount_value) / 100
+    if (couponData.discount_type === 'percentage') {
+      discountNgn = (cartTotal * couponData.discount_value) / 100
       
       // Apply maximum discount if set
-      if (coupon.maximum_discount_ngn && discountNgn > coupon.maximum_discount_ngn) {
-        discountNgn = coupon.maximum_discount_ngn
+      if (couponData.maximum_discount_ngn && discountNgn > couponData.maximum_discount_ngn) {
+        discountNgn = couponData.maximum_discount_ngn
       }
-    } else if (coupon.discount_type === 'fixed') {
-      discountNgn = coupon.discount_value
+    } else if (couponData.discount_type === 'fixed') {
+      discountNgn = couponData.discount_value
     }
 
     return {
       success: true,
       discountNgn,
-      discountType: coupon.discount_type,
-      discountValue: coupon.discount_value,
+      discountType: couponData.discount_type,
+      discountValue: couponData.discount_value,
     }
   } catch (error) {
     console.error('Error applying coupon:', error)
@@ -394,7 +416,7 @@ export async function updateOrderStatus(
       updateData.payment_metadata = paymentMetadata
     }
 
-    const { error } = await serviceSupabase.from('orders').update(updateData).eq('id', orderId)
+    const { error } = await (serviceSupabase as any).from('orders').update(updateData).eq('id', orderId)
 
     if (error) {
       console.error('Error updating order status:', error)
@@ -411,21 +433,23 @@ export async function updateOrderStatus(
 
       if (orderItems) {
         for (const item of orderItems) {
-          if (item.product_id) {
+          const itemData = item as any
+          if (itemData.product_id) {
             // Get current stock
             const { data: product } = await serviceSupabase
               .from('products')
               .select('stock_quantity, track_inventory')
-              .eq('id', item.product_id)
+              .eq('id', itemData.product_id)
               .single()
 
-            if (product && product.track_inventory) {
+            const productData = product as any
+            if (productData && productData.track_inventory) {
               // Reduce stock
-              const newStock = Math.max(0, product.stock_quantity - item.quantity)
-              await serviceSupabase
+              const newStock = Math.max(0, productData.stock_quantity - itemData.quantity)
+              await (serviceSupabase as any)
                 .from('products')
                 .update({ stock_quantity: newStock })
-                .eq('id', item.product_id)
+                .eq('id', itemData.product_id)
             }
           }
         }
@@ -459,18 +483,20 @@ export async function clearCartAfterOrder(
       return { success: false, error: 'Order not found' }
     }
 
+    const orderData = order as any
+
     // Find and clear the cart
     let cartQuery = serviceSupabase.from('carts').select('id')
 
-    if (order.user_id) {
-      cartQuery = cartQuery.eq('user_id', order.user_id).is('session_id', null)
+    if (orderData.user_id) {
+      cartQuery = cartQuery.eq('user_id', orderData.user_id).is('session_id', null)
     }
 
     const { data: cart } = await cartQuery.single()
 
     if (cart) {
       // Delete all cart items
-      await serviceSupabase.from('cart_items').delete().eq('cart_id', cart.id)
+      await serviceSupabase.from('cart_items').delete().eq('cart_id', (cart as any).id)
     }
 
     revalidatePath('/', 'layout')
