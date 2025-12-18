@@ -33,7 +33,7 @@ function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
     setError(null)
 
     try {
-      const result = await loginAction(formData.email, formData.password)
+      const result = await loginAction(formData.email, formData.password, redirectTo)
 
       if (result.error) {
         setError(result.error)
