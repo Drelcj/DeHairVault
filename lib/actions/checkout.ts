@@ -73,19 +73,22 @@ function calculateShippingCost(country: string): number {
 
 // Create order from checkout form data
 export async function createOrder(
-  formData: CheckoutFormData,
-  sessionId?: string
+  formData: CheckoutFormData
 ): Promise<OrderResult> {
   try {
     const supabase = await createClient()
 
-    // Get current user
+    // Get current user - REQUIRED
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
-    // Get cart
-    const cart = await getCart(sessionId)
+    if (!user) {
+      return { success: false, error: 'Authentication required. Please log in.' }
+    }
+
+    // Get cart for authenticated user (no sessionId needed)
+    const cart = await getCart()
     if (!cart || cart.items.length === 0) {
       return { success: false, error: 'Cart is empty' }
     }

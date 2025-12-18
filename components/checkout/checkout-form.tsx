@@ -40,10 +40,9 @@ type CheckoutFormValues = z.infer<typeof checkoutSchema>
 
 interface CheckoutFormProps {
   cart: CartWithItems
-  sessionId: string | null
 }
 
-export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
+export function CheckoutForm({ cart }: CheckoutFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -150,7 +149,7 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
       }
 
       // Create order
-      const orderResult = await createOrder(formData, sessionId || undefined)
+      const orderResult = await createOrder(formData)
 
       if (!orderResult.success || !orderResult.orderId) {
         setError(orderResult.error || 'Failed to create order')
@@ -211,8 +210,8 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
         {/* Left Column - Form */}
         <div className="lg:col-span-2 space-y-8">
           {/* Customer Information */}
-          <div className="rounded-lg border bg-white p-6">
-            <h2 className="text-xl font-bold mb-6">Contact Information</h2>
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <h2 className="font-[family-name:var(--font-playfair)] text-xl font-medium mb-6 text-foreground">Contact Information</h2>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="customerName">Full Name *</Label>
@@ -257,8 +256,8 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
           </div>
 
           {/* Shipping Address */}
-          <div className="rounded-lg border bg-white p-6">
-            <h2 className="text-xl font-bold mb-6">Shipping Address</h2>
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <h2 className="font-[family-name:var(--font-playfair)] text-xl font-medium mb-6 text-foreground">Shipping Address</h2>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="shippingAddressLine1">Address Line 1 *</Label>
@@ -337,7 +336,7 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
           </div>
 
           {/* Billing Address */}
-          <div className="rounded-lg border bg-white p-6">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-all duration-300">
             <div className="mb-4 flex items-center space-x-2">
               <Checkbox
                 id="billingSameAsShipping"
@@ -353,7 +352,7 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
 
             {!billingSameAsShipping && (
               <div className="space-y-4">
-                <h2 className="text-xl font-bold">Billing Address</h2>
+                <h2 className="font-[family-name:var(--font-playfair)] text-xl font-medium text-foreground">Billing Address</h2>
                 <div>
                   <Label htmlFor="billingAddressLine1">Address Line 1 *</Label>
                   <Input
@@ -400,8 +399,8 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
           </div>
 
           {/* Customer Notes */}
-          <div className="rounded-lg border bg-white p-6">
-            <h2 className="text-xl font-bold mb-4">Additional Information</h2>
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <h2 className="font-[family-name:var(--font-playfair)] text-xl font-medium mb-4 text-foreground">Additional Information</h2>
             <div>
               <Label htmlFor="customerNotes">Order Notes (Optional)</Label>
               <Textarea
@@ -414,7 +413,7 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
           </div>
 
           {/* Payment Method */}
-          <div className="rounded-lg border bg-white p-6">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-all duration-300">
             <PaymentMethod
               value={paymentMethod}
               onChange={(method) => setValue('paymentMethod', method)}
@@ -423,7 +422,7 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
 
           {/* Error Message */}
           {error && (
-            <div className="rounded-lg bg-red-50 p-4 text-red-800">
+            <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 p-4 text-red-800 dark:text-red-200">
               <p className="font-medium">Error</p>
               <p className="text-sm">{error}</p>
             </div>
@@ -433,7 +432,7 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-6 text-lg"
+            className="w-full py-6 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
           >
             {isSubmitting ? 'Processing...' : 'Proceed to Payment'}
           </Button>
@@ -455,8 +454,8 @@ export function CheckoutForm({ cart, sessionId }: CheckoutFormProps) {
 
             {/* Coupon Code */}
             {!appliedCoupon && (
-              <div className="rounded-lg border bg-white p-4">
-                <h3 className="font-semibold mb-3">Have a coupon code?</h3>
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <h3 className="font-medium mb-3 text-foreground">Have a coupon code?</h3>
                 <div className="flex gap-2">
                   <Input
                     value={couponCode}
