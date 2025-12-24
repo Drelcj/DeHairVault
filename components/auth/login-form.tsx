@@ -35,17 +35,19 @@ function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
     try {
       const result = await loginAction(formData.email, formData.password, redirectTo)
 
-      if (result.error) {
+      // If we get here with an error, show it
+      if (result?.error) {
         setError(result.error)
         setIsLoading(false)
         return
       }
-
-      if (result.success && result.destination) {
-        // Use window.location for a hard navigation to ensure session is properly loaded
-        window.location.href = result.destination
+      
+      if (result?.success && result?.destination) {
+        // Use router.push then refresh to ensure proper navigation with cookies
+        router.push(result.destination)
+        router.refresh()
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Login error:', err)
       setError("An unexpected error occurred. Please try again.")
       setIsLoading(false)

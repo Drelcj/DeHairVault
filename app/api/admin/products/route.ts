@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 // GET /api/admin/products
 // Query params: q (search), sort (created_at:desc, name:asc, price:asc), page, pageSize
@@ -9,8 +9,10 @@ export async function GET(req: Request) {
   const user = auth?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: roleRow } = await supabase.from('users').select('role').eq('id', user.id).single<{ role: string | null }>()
-  if (!roleRow || roleRow.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // Use service client for role check to bypass RLS
+  const serviceClient = createServiceClient()
+  const { data: roleRow } = await serviceClient.from('users').select('role').eq('id', user.id).single<{ role: string | null }>()
+  if (!roleRow || (roleRow.role !== 'ADMIN' && roleRow.role !== 'SUPER_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const url = new URL(req.url)
   const q = url.searchParams.get('q') || ''

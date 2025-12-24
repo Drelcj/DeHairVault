@@ -11,6 +11,7 @@ import { hairCategoryOptions, hairGradeOptions, hairOriginOptions, hairTextureOp
 import { useProductForm } from '@/hooks/useProductForm'
 import type { ActionResult, ProductFormValues } from '@/types/admin'
 import { DrawType } from '@/types/database.types'
+import { ImageUpload } from './image-upload'
 
 type Props = {
   initialData?: Partial<ProductFormValues>
@@ -256,12 +257,17 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
         </div>
 
         <div className="space-y-3 md:col-span-2">
-          <Label htmlFor="images">Images (comma separated URLs)</Label>
-          <Input
-            id="images"
-            value={form.values.images.join(', ')}
-            onChange={(e) => form.updateField('images', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-            placeholder="https://..."
+          <ImageUpload
+            images={form.values.images}
+            onChange={(images) => {
+              form.updateField('images', images)
+              // Auto-set thumbnail to first image if not set
+              if (images.length > 0 && !form.values.thumbnail_url) {
+                form.updateField('thumbnail_url', images[0])
+              }
+            }}
+            maxImages={10}
+            label="Product Images"
           />
         </div>
 

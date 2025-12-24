@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 const SUPABASE_ENV_KEYS = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'] as const
 const MISSING_SUPABASE_ENV = SUPABASE_ENV_KEYS.filter((key) => !process.env[key])
@@ -28,7 +28,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
     if (!user) return null
 
-    const { data: profile } = await supabase
+    // Use service client to bypass RLS for profile lookup
+    const serviceClient = createServiceClient()
+    const { data: profile } = await serviceClient
       .from('users')
       .select('id, role, full_name, email')
       .eq('id', user.id)
@@ -46,7 +48,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     let ensuredProfile = profile ?? null
     if (!profile || !profile.role) {
       const fallbackRole = resolvedRole ?? 'CUSTOMER'
-      const { data: upsertedProfile } = await supabase
+      const { data: upsertedProfile } = await serviceClient
         .from('users')
         .upsert(
           {

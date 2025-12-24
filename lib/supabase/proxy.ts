@@ -5,6 +5,24 @@ import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 import type { Database } from '@/types/database.types';
 
+// Service client for bypassing RLS in role lookups
+function createProxyServiceClient() {
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll() { return []; },
+        setAll() {},
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -53,14 +71,16 @@ export async function updateSession(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
       // Redirect to login if not authenticated
+      console.log('[Proxy] No user found, redirecting to login');
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/login';
       redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Check if user has admin role
-    const { data: userData, error: userError } = await supabase
+    // Check if user has admin role - use service client to bypass RLS
+    const serviceClient = createProxyServiceClient();
+    const { data: userData, error: userError } = await serviceClient
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -69,8 +89,11 @@ export async function updateSession(request: NextRequest) {
     type UserRoleData = { role: string } | null;
     const typedUserData = userData as UserRoleData;
 
+    console.log('[Proxy] User:', user.id, 'Role data:', typedUserData, 'Error:', userError);
+
     if (!typedUserData || userError || (typedUserData.role !== 'ADMIN' && typedUserData.role !== 'SUPER_ADMIN')) {
       // Redirect to login if not admin or super admin
+      console.log('[Proxy] User is not admin, redirecting. Role:', typedUserData?.role);
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/login';
       redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);

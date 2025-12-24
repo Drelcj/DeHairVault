@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function loginAction(email: string, password: string, redirectTo?: string) {
   // Basic input validation
@@ -30,12 +30,17 @@ export async function loginAction(email: string, password: string, redirectTo?: 
     return { error: 'Unable to sign in. Please try again.' }
   }
 
+  // Use service client to bypass RLS for role lookup
+  const serviceClient = createServiceClient()
+
   // Fetch user role to determine redirect destination
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await serviceClient
     .from('users')
     .select('role')
     .eq('id', user.id)
     .single<{ role: string }>()
+
+  console.log('[Login] User:', user.id, user.email, 'Profile:', profile, 'Error:', profileError)
 
   // Admin users always go to admin dashboard
   // Other users go to redirectTo or homepage
@@ -43,6 +48,8 @@ export async function loginAction(email: string, password: string, redirectTo?: 
   if (profile?.role === 'ADMIN' || profile?.role === 'SUPER_ADMIN') {
     destination = '/admin'
   }
+
+  console.log('[Login] Destination:', destination, 'Role:', profile?.role)
 
   // Revalidate the entire layout to ensure HeaderShell gets fresh session data
   revalidatePath('/', 'layout')
