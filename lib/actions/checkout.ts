@@ -99,7 +99,9 @@ export async function createOrder(
 
     // Calculate totals
     const subtotalNgn = cart.subtotalNgn
-    const shippingCostNgn = await calculateShippingCost(formData.shippingCountry)
+    // TODO: Uncomment when DHL shipping is integrated
+    // const shippingCostNgn = await calculateShippingCost(formData.shippingCountry)
+    const shippingCostNgn = 0 // Temporarily disabled for payment testing
     const taxNgn = 0 // Tax calculation can be added later
     const discountNgn = formData.discountNgn || 0
     const totalNgn = subtotalNgn + shippingCostNgn + taxNgn - discountNgn
