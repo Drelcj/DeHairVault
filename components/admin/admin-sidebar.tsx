@@ -90,7 +90,7 @@ export function AdminSidebar({ userName }: AdminSidebarProps) {
         {/* Bottom Section */}
         <div className="border-t border-border p-4 space-y-2">
           <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
-            <Link href="/">
+            <Link href="/shop">
               <Store className="h-4 w-4" />
               View Storefront
             </Link>

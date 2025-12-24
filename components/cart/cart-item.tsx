@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Minus, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { removeFromCart, updateCartItemQuantity } from '@/lib/actions/cart'
@@ -60,13 +61,17 @@ export function CartItem({ item }: CartItemProps) {
     }
   }
 
-  const imageUrl = item.product.thumbnail_url || item.product.images[0] || '/placeholder.jpg'
+  const imageUrl = item.product.thumbnail_url || item.product.images?.[0] || '/placeholder.jpg'
   const totalPrice = item.unit_price_ngn * item.quantity
+  const productUrl = item.product.slug ? `/shop/${item.product.slug}` : '#'
 
   return (
     <div className="flex gap-4 py-4 border-b border-border">
-      {/* Product Image */}
-      <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+      {/* Product Image - Clickable */}
+      <Link 
+        href={productUrl}
+        className="relative w-20 h-20 rounded-lg overflow-hidden bg-secondary flex-shrink-0 hover:opacity-80 transition-opacity"
+      >
         <Image
           src={imageUrl}
           alt={item.product.name}
@@ -74,11 +79,13 @@ export function CartItem({ item }: CartItemProps) {
           className="object-cover"
           sizes="80px"
         />
-      </div>
+      </Link>
 
       {/* Product Details */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-sm text-foreground truncate">{item.product.name}</h4>
+        <Link href={productUrl} className="hover:text-accent transition-colors">
+          <h4 className="font-medium text-sm text-foreground truncate">{item.product.name}</h4>
+        </Link>
         {item.selected_length && (
           <p className="text-xs text-muted-foreground mt-1">Length: {item.selected_length}"</p>
         )}

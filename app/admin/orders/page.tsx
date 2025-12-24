@@ -9,7 +9,18 @@ export const metadata = {
   title: "Orders | De Hair Vault Admin",
 }
 
-async function getOrders(status?: string) {
+interface OrderRow {
+  id: string
+  order_number: string
+  customer_name: string
+  customer_email: string
+  total_ngn: number
+  status: string
+  created_at: string
+  payment_status: string
+}
+
+async function getOrders(status?: string): Promise<OrderRow[]> {
   const supabase = createServiceClient()
   
   let query = supabase
@@ -29,7 +40,7 @@ async function getOrders(status?: string) {
     return []
   }
 
-  return data || []
+  return (data || []) as OrderRow[]
 }
 
 async function getOrderCounts() {
