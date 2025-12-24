@@ -109,11 +109,22 @@ export async function addToCart(
     const { data: existingItem } = await existingItemQuery.single()
 
     if (existingItem) {
+      // Check if new total quantity exceeds stock
+      const newTotalQuantity = (existingItem as any).quantity + quantity
+      if (newTotalQuantity > (product as any).stock_quantity) {
+        const currentInCart = (existingItem as any).quantity
+        const canAdd = (product as any).stock_quantity - currentInCart
+        if (canAdd <= 0) {
+          return { success: false, error: `You already have the maximum available quantity in your cart` }
+        }
+        return { success: false, error: `Only ${canAdd} more can be added. You have ${currentInCart} in cart, ${(product as any).stock_quantity} available total.` }
+      }
+
       // Update quantity
       const { error: updateError } = await (supabase as any)
         .from('cart_items')
         .update({
-          quantity: (existingItem as any).quantity + quantity,
+          quantity: newTotalQuantity,
           updated_at: new Date().toISOString(),
         })
         .eq('id', (existingItem as any).id)
@@ -122,6 +133,11 @@ export async function addToCart(
         return { success: false, error: updateError.message }
       }
     } else {
+      // Check if quantity exceeds stock
+      if (quantity > (product as any).stock_quantity) {
+        return { success: false, error: `Only ${(product as any).stock_quantity} items available in stock` }
+      }
+
       // Add new item
       const { error: insertError } = await supabase.from('cart_items').insert({
         cart_id: cartId,

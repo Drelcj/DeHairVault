@@ -76,6 +76,8 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
   const shippingCountry = watch('shippingCountry')
 
   // Calculate shipping cost based on country
+  // TODO: Replace with getShippingOptions() from shipping service when DHL is integrated
+  // This will allow users to select from multiple shipping options with real DHL rates
   const shippingCost = shippingCountry === 'Nigeria' ? 5000 : 15000
   const tax = 0
 

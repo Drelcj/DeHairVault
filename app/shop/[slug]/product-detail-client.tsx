@@ -248,9 +248,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               >
                 +
               </Button>
-              <span className="text-sm text-muted-foreground ml-2">
-                {product.stock_quantity} available
-              </span>
+              {quantity >= product.stock_quantity ? (
+                <span className="text-sm text-amber-600 ml-2 font-medium">
+                  Max quantity ({product.stock_quantity} available)
+                </span>
+              ) : (
+                <span className="text-sm text-muted-foreground ml-2">
+                  {product.stock_quantity} available
+                </span>
+              )}
             </div>
           </div>
 

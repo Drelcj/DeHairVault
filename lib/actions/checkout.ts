@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { OrderInsert, OrderItemInsert, OrderType, OrderStatus } from '@/types/database.types'
 import { getCart, clearCart } from './cart'
+import { calculateShippingCost } from '@/lib/services/shipping'
 
 export interface CheckoutFormData {
   // Customer info
@@ -61,16 +62,6 @@ function generateOrderNumber(): string {
   return `DHV-${year}-${random}`
 }
 
-// Calculate shipping cost (flat rate for now)
-function calculateShippingCost(country: string): number {
-  // Flat rate shipping in NGN
-  if (country === 'Nigeria') {
-    return 5000 // NGN 5,000 for Nigeria
-  } else {
-    return 15000 // NGN 15,000 for international
-  }
-}
-
 // Create order from checkout form data
 export async function createOrder(
   formData: CheckoutFormData
@@ -108,7 +99,7 @@ export async function createOrder(
 
     // Calculate totals
     const subtotalNgn = cart.subtotalNgn
-    const shippingCostNgn = calculateShippingCost(formData.shippingCountry)
+    const shippingCostNgn = await calculateShippingCost(formData.shippingCountry)
     const taxNgn = 0 // Tax calculation can be added later
     const discountNgn = formData.discountNgn || 0
     const totalNgn = subtotalNgn + shippingCostNgn + taxNgn - discountNgn
