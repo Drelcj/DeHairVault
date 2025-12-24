@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { Product, HairTexture } from '@/types/database.types'
 
 export interface ProductFilters {
@@ -14,10 +14,11 @@ export interface ProductFilters {
 
 export async function getProducts(filters?: ProductFilters): Promise<Product[]> {
   try {
-    const supabase = await createClient()
+    // Use service client to bypass RLS for reliable public access
+    const supabase = createServiceClient()
     
     // Check if Supabase is configured
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.error('Supabase environment variables not configured')
       return []
     }
@@ -72,7 +73,10 @@ export async function getProducts(filters?: ProductFilters): Promise<Product[]> 
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   try {
-    const supabase = await createClient()
+    // Use service client to bypass RLS for reliable public access
+    const supabase = createServiceClient()
+    
+    console.log(`[getProductBySlug] Looking up product with slug: ${slug}`)
     
     const { data, error } = await supabase
       .from('products')
@@ -82,13 +86,40 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       .single()
 
     if (error) {
-      console.error('Error fetching product by slug:', error)
+      console.error('[getProductBySlug] Error fetching product by slug:', error.message, { slug })
       return null
     }
 
+    console.log(`[getProductBySlug] Found product: ${data?.name}`)
     return data
   } catch (error) {
-    console.error('Error in getProductBySlug:', error)
+    console.error('[getProductBySlug] Error in getProductBySlug:', error)
     return null
+  }
+}
+
+export async function getFeaturedProducts(limit: number = 6): Promise<Product[]> {
+  try {
+    // Use service client to bypass RLS for reliable public access
+    const supabase = createServiceClient()
+    
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .eq('is_featured', true)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('[getFeaturedProducts] Error fetching featured products:', error.message)
+      return []
+    }
+
+    console.log(`[getFeaturedProducts] Found ${data?.length || 0} featured products`)
+    return data || []
+  } catch (error) {
+    console.error('[getFeaturedProducts] Error in getFeaturedProducts:', error)
+    return []
   }
 }

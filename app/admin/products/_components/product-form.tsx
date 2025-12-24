@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { hairCategoryOptions, hairGradeOptions, hairOriginOptions, hairTextureOptions, drawTypeOptions } from '@/lib/constants/enums'
 import { useProductForm } from '@/hooks/useProductForm'
+import { generateProductSlug } from '@/lib/utils/product'
 import type { ActionResult, ProductFormValues } from '@/types/admin'
 import { DrawType } from '@/types/database.types'
 import { ImageUpload } from './image-upload'
@@ -22,8 +23,33 @@ type Props = {
 export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
   const form = useProductForm(initialData)
   const [isPending, startTransition] = useTransition()
+  // Track if user has manually edited the slug
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!initialData?.slug)
 
   const lengthString = useMemo(() => form.values.available_lengths.join(', '), [form.values.available_lengths])
+
+  // Handle name change - auto-generate slug if not manually edited
+  const handleNameChange = (name: string) => {
+    form.updateField('name', name)
+    if (!slugManuallyEdited && mode === 'create') {
+      form.updateField('slug', generateProductSlug(name))
+    }
+  }
+
+  // Handle slug change - mark as manually edited
+  const handleSlugChange = (slug: string) => {
+    form.updateField('slug', slug)
+    if (slug !== generateProductSlug(form.values.name)) {
+      setSlugManuallyEdited(true)
+    }
+  }
+
+  // Generate slug from current name
+  const handleGenerateSlug = () => {
+    const generatedSlug = generateProductSlug(form.values.name)
+    form.updateField('slug', generatedSlug)
+    setSlugManuallyEdited(false)
+  }
   const modifierJson = useMemo(
     () => (form.values.length_price_modifiers ? JSON.stringify(form.values.length_price_modifiers, null, 2) : ''),
     [form.values.length_price_modifiers]
@@ -33,8 +59,31 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
     event.preventDefault()
     form.resetMessages()
 
+    // Validate required fields
+    if (!form.values.name.trim()) {
+      form.setError('Product name is required')
+      return
+    }
+    
+    // Auto-generate slug if empty
+    let finalSlug = form.values.slug.trim()
+    if (!finalSlug) {
+      finalSlug = generateProductSlug(form.values.name)
+      form.updateField('slug', finalSlug)
+    }
+    if (form.values.base_price_ngn <= 0) {
+      form.setError('Price must be greater than 0')
+      return
+    }
+
+    // Create the submission values with the guaranteed slug
+    const submissionValues = {
+      ...form.values,
+      slug: finalSlug,
+    }
+
     startTransition(async () => {
-      const result = await onSubmit(form.values)
+      const result = await onSubmit(submissionValues)
       if (result?.error) {
         form.setError(result.error)
       } else if (result?.success) {
@@ -57,20 +106,32 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
             <Input
               id="name"
               value={form.values.name}
-              onChange={(e) => form.updateField('name', e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               required
               className="bg-background"
             />
           </div>
           <div className="space-y-3">
-            <Label htmlFor="slug">Slug</Label>
-            <Input
-              id="slug"
-              value={form.values.slug}
-              onChange={(e) => form.updateField('slug', e.target.value)}
-              placeholder="auto-generated from name"
-              className="bg-background"
-            />
+            <Label htmlFor="slug">Slug (URL)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="slug"
+                value={form.values.slug}
+                onChange={(e) => handleSlugChange(e.target.value)}
+                placeholder="auto-generated from name"
+                className="bg-background flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateSlug}
+                className="shrink-0"
+              >
+                Generate
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">URL-friendly identifier for SEO. Auto-generated from name.</p>
           </div>
           <div className="space-y-3 md:col-span-2">
             <Label htmlFor="description">Description</Label>

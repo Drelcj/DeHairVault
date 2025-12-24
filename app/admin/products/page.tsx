@@ -162,7 +162,7 @@ export default async function AdminProductsPage({
                     </td>
                     <td className="px-6 py-4">
                       <Link
-                        href={`/admin/products/${product.slug}/edit`}
+                        href={`/admin/products/${product.id}/edit`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
                       >
                         <Edit className="h-3.5 w-3.5" />

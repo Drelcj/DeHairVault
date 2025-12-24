@@ -40,20 +40,24 @@ export function ProductCard({ product }: ProductCardProps) {
   const { refreshCart, openCart } = useCart()
   const router = useRouter()
 
+  // Defensive: ensure arrays are never null/undefined
+  const productImages = product.images ?? []
+  const availableLengths = product.available_lengths ?? []
+
   // Get the display image (thumbnail or first image)
-  const imageUrl = product.thumbnail_url || product.images[0] || ''
+  const imageUrl = product.thumbnail_url || productImages[0] || ''
   const fallbackImage = '/placeholder.jpg'
   
   // Format length range for display
-  const lengthDisplay = product.available_lengths.length > 0
-    ? product.available_lengths.length === 1
-      ? `${product.available_lengths[0]}"`
-      : `${Math.min(...product.available_lengths)}" - ${Math.max(...product.available_lengths)}"`
+  const lengthDisplay = availableLengths.length > 0
+    ? availableLengths.length === 1
+      ? `${availableLengths[0]}"`
+      : `${Math.min(...availableLengths)}" - ${Math.max(...availableLengths)}"`
     : 'Various'
 
   // Get default length for cart (smallest available)
-  const defaultLength = product.available_lengths.length > 0 
-    ? Math.min(...product.available_lengths) 
+  const defaultLength = availableLengths.length > 0 
+    ? Math.min(...availableLengths) 
     : null
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -83,8 +87,21 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   }
 
+  // Debug: log if slug is missing
+  if (!product.slug) {
+    console.error('[ProductCard] Product is missing slug:', product.name, product.id)
+  }
+
+  // If no slug, don't link anywhere (just show the card without navigation)
+  const productUrl = product.slug ? `/shop/${product.slug}` : '#'
+
   return (
-    <Link href={`/shop/${product.slug}`} className="block">
+    <Link href={productUrl} className="block" onClick={(e) => {
+      if (!product.slug) {
+        e.preventDefault()
+        console.error('[ProductCard] Cannot navigate - product has no slug:', product.name)
+      }
+    }}>
       <div className="group relative" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
         {/* Card Container */}
         <div className="relative bg-card rounded-xl overflow-hidden border border-border hover:border-accent/50 transition-all duration-500 hover:shadow-xl hover:shadow-accent/5">

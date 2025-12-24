@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft } from 'lucide-react'
@@ -10,6 +10,11 @@ import type { Product } from '@/types/database.types'
 
 interface ProductDetailClientProps {
   product: Product
+}
+
+// Debug: Log when component mounts
+if (typeof window !== 'undefined') {
+  console.log('[ProductDetailClient] Module loaded')
 }
 
 // Helper function to format price in Nigerian Naira
@@ -38,14 +43,29 @@ function formatCategory(category: string): string {
 }
 
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
+  // Debug: Log when component renders
+  console.log('[ProductDetailClient] Rendering with product:', product?.name, product?.slug)
+  
+  // Defensive: ensure arrays are never null/undefined
+  const availableLengths = product.available_lengths ?? []
+  const productImages = product.images ?? []
+  
   const [selectedLength, setSelectedLength] = useState<number | null>(
-    product.available_lengths[0] || null
+    availableLengths[0] ?? null
   )
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [quantity, setQuantity] = useState(1)
+  
+  // Debug: Log on mount
+  useEffect(() => {
+    console.log('[ProductDetailClient] Component mounted for:', product?.name)
+    return () => {
+      console.log('[ProductDetailClient] Component unmounting for:', product?.name)
+    }
+  }, [product?.name])
 
-  const images = product.images.length > 0 ? product.images : [product.thumbnail_url || '']
+  const images = productImages.length > 0 ? productImages : [product.thumbnail_url || '']
   const currentImage = images[selectedImageIndex] || ''
   const fallbackImage = '/placeholder.jpg'
 
@@ -149,13 +169,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           )}
 
           {/* Length Selection */}
-          {product.available_lengths.length > 0 && (
+          {availableLengths.length > 0 && (
             <div>
               <label className="text-sm font-medium text-foreground mb-3 block">
                 Select Length
               </label>
               <div className="flex flex-wrap gap-3">
-                {product.available_lengths.map((length) => (
+                {availableLengths.map((length) => (
                   <button
                     key={length}
                     onClick={() => setSelectedLength(length)}

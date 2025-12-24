@@ -1,6 +1,10 @@
 import Link from "next/link"
-import { HeaderShell } from "@/components/header-shell"
-import { ProductEditForm } from "./_components/product-edit-form"
+import { ArrowLeft } from "lucide-react"
+import { notFound } from "next/navigation"
+import { createServiceClient } from "@/lib/supabase/server"
+import { ProductForm } from "@/app/admin/products/_components/product-form"
+import { updateProductAction } from "@/app/admin/products/actions"
+import type { ProductFormValues } from "@/types/admin"
 
 export const dynamic = 'force-dynamic'
 
@@ -9,61 +13,109 @@ export const metadata = {
 }
 
 async function getProduct(id: string) {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
-    const res = await fetch(`${baseUrl}/api/admin/products/${id}`, { cache: 'no-store' })
-    if (!res.ok) {
-      console.error('Failed to fetch product:', res.status)
-      return null
-    }
-    return res.json()
-  } catch (error) {
-    console.error('Error fetching product:', error)
+  const supabase = createServiceClient()
+  
+  const { data: product, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error || !product) {
     return null
   }
+
+  const { data: variants } = await supabase
+    .from('product_variants')
+    .select('*')
+    .eq('product_id', id)
+
+  return { product, variants: variants || [] }
 }
 
-export default async function AdminProductEditPage({ params }: { params: { id: string } }) {
-  const data = await getProduct(params.id)
-  const product = data?.product
-  const variants = data?.variants ?? []
+interface PageProps {
+  params: Promise<{ id: string }>
+}
 
-  if (!product) {
-    return (
-      <main className="min-h-screen bg-background">
-        <HeaderShell />
-        <section className="container mx-auto px-6 lg:px-12 py-10">
-          <div className="mb-6">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
-            <h1 className="font-[--font-playfair] text-2xl md:text-3xl font-medium text-foreground">Edit Product</h1>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
-            <p className="text-sm text-muted-foreground mb-4">Product not found.</p>
-            <Link href="/admin/products" className="text-accent hover:text-accent/80 text-sm font-medium">
-              ← Back to Products
-            </Link>
-          </div>
-        </section>
-      </main>
-    )
+export default async function AdminProductEditPage({ params }: PageProps) {
+  const { id } = await params
+  const data = await getProduct(id)
+
+  if (!data) {
+    notFound()
+  }
+
+  const { product, variants } = data
+
+  // Convert to ProductFormValues format
+  const initialData: Partial<ProductFormValues> = {
+    name: product.name,
+    slug: product.slug,
+    description: product.description,
+    short_description: product.short_description,
+    grade: product.grade,
+    origin: product.origin,
+    texture: product.texture,
+    category: product.category,
+    draw_type: product.draw_type,
+    available_lengths: product.available_lengths || [],
+    base_price_ngn: product.base_price_ngn,
+    compare_at_price_ngn: product.compare_at_price_ngn,
+    cost_price_ngn: product.cost_price_ngn,
+    length_price_modifiers: product.length_price_modifiers,
+    stock_quantity: product.stock_quantity,
+    low_stock_threshold: product.low_stock_threshold,
+    track_inventory: product.track_inventory,
+    allow_backorder: product.allow_backorder,
+    images: product.images || [],
+    thumbnail_url: product.thumbnail_url,
+    video_url: product.video_url,
+    is_active: product.is_active,
+    is_featured: product.is_featured,
+    is_new_arrival: product.is_new_arrival,
+    is_preorder_only: product.is_preorder_only,
+    variants: variants.map((v: any) => ({
+      id: v.id,
+      length: v.length,
+      sku: v.sku || '',
+      price_override_ngn: v.price_override_ngn,
+      stock_quantity: v.stock_quantity,
+      weight_grams: v.weight_grams,
+    })),
+  }
+
+  const handleSubmit = async (values: ProductFormValues) => {
+    'use server'
+    return await updateProductAction(id, values)
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <HeaderShell />
-      <section className="container mx-auto px-6 lg:px-12 py-10">
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
-              <h1 className="font-[--font-playfair] text-2xl md:text-3xl font-medium text-foreground">Edit {product.name}</h1>
-            </div>
-            <Link href="/admin/products" className="text-sm text-accent hover:text-accent/80">Back to Products</Link>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <Link 
+              href="/admin/products" 
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Products
+            </Link>
           </div>
+          <h1 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground">
+            Edit Product
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Update {product.name}
+          </p>
         </div>
+      </div>
 
-        <ProductEditForm product={product} variants={variants} />
-      </section>
-    </main>
+      {/* Form Card */}
+      <div className="rounded-xl border border-border bg-card p-6 md:p-8">
+        <ProductForm mode="edit" initialData={initialData} onSubmit={handleSubmit} />
+      </div>
+    </div>
   )
 }

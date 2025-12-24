@@ -25,15 +25,20 @@ async function fetchProduct(id: string): Promise<ProductFormValues | null> {
   } as ProductFormValues
 }
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
-  const product = await fetchProduct(params.id)
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export default async function EditProductPage({ params }: PageProps) {
+  const { id } = await params
+  const product = await fetchProduct(id)
   if (!product) {
     return notFound()
   }
 
   const handleSubmit = async (values: ProductFormValues) => {
     'use server'
-    return await updateProductAction(params.id, values)
+    return await updateProductAction(id, values)
   }
 
   return (

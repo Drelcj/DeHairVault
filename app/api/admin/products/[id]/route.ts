@@ -9,10 +9,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const user = auth?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: roleRow } = await supabase.from('users').select('role').eq('id', user.id).single<{ role: string | null }>()
-  if (!roleRow || roleRow.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // Use service client to bypass RLS for role check
+  const serviceClient = createServiceClient()
+  const { data: roleRow } = await serviceClient.from('users').select('role').eq('id', user.id).single<{ role: string | null }>()
+  if (!roleRow || (roleRow.role !== 'ADMIN' && roleRow.role !== 'SUPER_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: product, error } = await supabase
+  const { data: product, error } = await serviceClient
     .from('products')
     .select('*')
     .eq('id', params.id)
@@ -21,7 +23,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
 
-  const { data: variants } = await supabase
+  const { data: variants } = await serviceClient
     .from('product_variants')
     .select('*')
     .eq('product_id', params.id)
@@ -36,8 +38,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const user = auth?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: roleRow } = await supabase.from('users').select('role').eq('id', user.id).single<{ role: string | null }>()
-  if (!roleRow || roleRow.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const serviceClient = createServiceClient()
+  const { data: roleRow } = await serviceClient.from('users').select('role').eq('id', user.id).single<{ role: string | null }>()
+  if (!roleRow || (roleRow.role !== 'ADMIN' && roleRow.role !== 'SUPER_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
   const { name, description, price_ngn, category, sku, stock_quantity, is_available } = body ?? {}
@@ -51,7 +54,6 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (stock_quantity !== undefined) updatePayload.stock_quantity = stock_quantity
   if (is_available !== undefined) updatePayload.is_available = is_available
 
-  const serviceClient = createServiceClient()
   const { error: updateError } = await (serviceClient as any)
     .from('products')
     .update(updatePayload)
