@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 // GET /api/admin/orders
 // Admin-only: returns paginated orders with optional filters
@@ -24,18 +24,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: roleRow, error: roleErr } = await supabase
+  // Use service client for role check to bypass RLS
+  const serviceClient = createServiceClient()
+  const { data: roleRow, error: roleErr } = await serviceClient
     .from('users')
     .select('role')
     .eq('id', user.id)
     .single()
 
-  if (roleErr || !roleRow || roleRow.role !== 'ADMIN') {
+  if (roleErr || !roleRow || (roleRow.role !== 'ADMIN' && roleRow.role !== 'SUPER_ADMIN')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Base query
-  let query = supabase
+  // Base query - use service client for data access
+  let query = serviceClient
     .from('orders')
     .select('id, order_number, customer_name, customer_email, total_ngn, status, created_at', { count: 'exact' })
 

@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { getSessionUser } from '@/lib/auth/session'
+import { AdminSidebar } from '@/components/admin/admin-sidebar'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,38 +14,29 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     return redirect('/login?redirectTo=/admin')
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/admin" className="font-semibold">DeHair Vault Admin</Link>
-          <nav className="flex items-center gap-3 text-sm">
-            <NavLink href="/admin">Dashboard</NavLink>
-            <NavLink href="/admin/products">Products</NavLink>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/">View Storefront</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-    </div>
-  )
-}
+  const userName = session?.profile?.full_name || session?.profile?.email || session?.user?.email
 
-function NavLink({ href, children }: { href: string; children: ReactNode }) {
-  const isActive = false // simple placeholder; could be upgraded with usePathname
   return (
-    <Link
-      href={href}
-      className={cn(
-        'rounded-md px-3 py-2 transition-colors hover:bg-gray-100',
-        isActive && 'bg-gray-100 font-semibold'
-      )}
-    >
-      {children}
-    </Link>
+    <div className="min-h-screen bg-background">
+      <AdminSidebar userName={userName} />
+      <div className="pl-64">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
+          <div className="flex-1">
+            {/* Breadcrumb or page title can go here */}
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {new Date().toLocaleDateString('en-NG', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </span>
+          </div>
+        </header>
+        <main className="p-6">{children}</main>
+      </div>
+    </div>
   )
 }

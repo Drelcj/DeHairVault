@@ -1,6 +1,7 @@
 import Link from "next/link"
-import { HeaderShell } from "@/components/header-shell"
+import { ShoppingCart, Eye, Filter } from "lucide-react"
 import { formatPrice } from "@/lib/utils/currency"
+import { createServiceClient } from "@/lib/supabase/server"
 
 export const dynamic = 'force-dynamic'
 
@@ -8,88 +9,203 @@ export const metadata = {
   title: "Orders | De Hair Vault Admin",
 }
 
-async function fetchPendingOrders() {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
-    const res = await fetch(`${baseUrl}/api/admin/orders?status=PENDING&page=1&pageSize=20&sort=created_at:desc`, {
-      cache: 'no-store',
-    })
-    if (!res.ok) {
-      console.error('Failed to fetch orders:', res.status)
-      return { data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 0 } }
-    }
-    return res.json()
-  } catch (error) {
-    console.error('Error fetching orders:', error)
-    return { data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 0 } }
+async function getOrders(status?: string) {
+  const supabase = createServiceClient()
+  
+  let query = supabase
+    .from('orders')
+    .select('id, order_number, customer_name, customer_email, total_ngn, status, created_at, payment_status')
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (status && status !== 'ALL') {
+    query = query.eq('status', status)
   }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error fetching orders:', error)
+    return []
+  }
+
+  return data || []
 }
 
-export default async function AdminOrdersPage() {
-  const { data: orders } = await fetchPendingOrders()
+async function getOrderCounts() {
+  const supabase = createServiceClient()
+  
+  const statuses = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+  const counts: Record<string, number> = { ALL: 0 }
+  
+  for (const status of statuses) {
+    const { count } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', status)
+    counts[status] = count || 0
+    counts.ALL += count || 0
+  }
+  
+  return counts
+}
+
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  const params = await searchParams
+  const currentStatus = params.status || 'ALL'
+  const orders = await getOrders(currentStatus === 'ALL' ? undefined : currentStatus)
+  const counts = await getOrderCounts()
+
+  const statusTabs = [
+    { value: 'ALL', label: 'All Orders' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'CONFIRMED', label: 'Confirmed' },
+    { value: 'PROCESSING', label: 'Processing' },
+    { value: 'SHIPPED', label: 'Shipped' },
+    { value: 'DELIVERED', label: 'Delivered' },
+    { value: 'CANCELLED', label: 'Cancelled' },
+  ]
+
   return (
-    <main className="min-h-screen bg-background">
-      <HeaderShell />
-      <section className="container mx-auto px-6 lg:px-12 py-10">
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
-              <h1 className="font-(family-name:--font-playfair) text-2xl md:text-3xl font-medium text-foreground">Orders</h1>
-            </div>
-            <Link href="/admin" className="text-sm text-accent hover:text-accent/80">Back to Dashboard</Link>
-          </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground">
+            Orders
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Manage and track customer orders
+          </p>
         </div>
+      </div>
 
-        <div className="rounded-lg border border-border bg-card shadow-sm">
-          <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-border">
-            <h2 className="text-base font-medium">Pending Orders</h2>
-            <div className="text-sm text-muted-foreground">Latest 20</div>
-          </div>
+      {/* Status Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-border pb-4">
+        {statusTabs.map((tab) => (
+          <Link
+            key={tab.value}
+            href={`/admin/orders${tab.value === 'ALL' ? '' : `?status=${tab.value}`}`}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              currentStatus === tab.value
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            {tab.label}
+            <span className={`rounded-full px-2 py-0.5 text-xs ${
+              currentStatus === tab.value
+                ? 'bg-accent-foreground/20'
+                : 'bg-muted-foreground/20'
+            }`}>
+              {counts[tab.value] || 0}
+            </span>
+          </Link>
+        ))}
+      </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left border-b border-border">
-                  <th className="px-4 md:px-6 py-3 font-medium">Order #</th>
-                  <th className="px-4 md:px-6 py-3 font-medium">Customer</th>
-                  <th className="px-4 md:px-6 py-3 font-medium">Email</th>
-                  <th className="px-4 md:px-6 py-3 font-medium">Total (₦)</th>
-                  <th className="px-4 md:px-6 py-3 font-medium">Status</th>
-                  <th className="px-4 md:px-6 py-3 font-medium">Placed</th>
-                  <th className="px-4 md:px-6 py-3 font-medium">Actions</th>
+      {/* Orders Table */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Order #</th>
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Customer</th>
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Total</th>
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Payment</th>
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Date</th>
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                    <p className="mt-4 text-muted-foreground">No orders found</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {orders.length === 0 ? (
-                  <tr>
-                    <td className="px-4 md:px-6 py-6 text-muted-foreground" colSpan={7}>No pending orders.</td>
+              ) : (
+                orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4 font-medium text-foreground">
+                      {order.order_number}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="font-medium text-foreground">{order.customer_name}</p>
+                        <p className="text-xs text-muted-foreground">{order.customer_email}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-medium">
+                      {formatPrice(Number(order.total_ngn || 0), 'NGN')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <OrderStatusBadge status={order.status} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <PaymentStatusBadge status={order.payment_status} />
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {new Date(order.created_at).toLocaleDateString('en-NG', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        View
+                      </Link>
+                    </td>
                   </tr>
-                ) : (
-                  orders.map((o: any) => (
-                    <tr key={o.id} className="border-t border-border">
-                      <td className="px-4 md:px-6 py-3">{o.order_number}</td>
-                      <td className="px-4 md:px-6 py-3">{o.customer_name}</td>
-                      <td className="px-4 md:px-6 py-3 text-muted-foreground">{o.customer_email}</td>
-                      <td className="px-4 md:px-6 py-3">{formatPrice(Number(o.total_ngn || 0), 'NGN', { showDecimals: true })}</td>
-                      <td className="px-4 md:px-6 py-3">
-                        <span className="inline-flex items-center rounded-full border border-border bg-background/70 px-2.5 py-1.5 text-xs">{o.status}</span>
-                      </td>
-                      <td className="px-4 md:px-6 py-3 text-muted-foreground">{new Date(o.created_at).toLocaleString('en-NG')}</td>
-                      <td className="px-4 md:px-6 py-3">
-                        <div className="flex gap-2 text-xs">
-                          <Link href={`/admin/orders/${o.id}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1.5 hover:bg-accent hover:text-accent-foreground">View</Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
+  )
+}
+
+function OrderStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    CONFIRMED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    PROCESSING: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+    SHIPPED: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+    DELIVERED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    REFUNDED: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+  }
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${styles[status] || styles.PENDING}`}>
+      {status}
+    </span>
+  )
+}
+
+function PaymentStatusBadge({ status }: { status: string }) {
+  const isPaid = status === 'PAID' || status === 'paid'
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+      isPaid 
+        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+    }`}>
+      {isPaid ? 'Paid' : 'Pending'}
+    </span>
   )
 }
