@@ -22,7 +22,11 @@ export function CartSummary() {
     return null
   }
 
-  const subtotal = cart.subtotalNgn
+  // Calculate subtotal using current product prices (not stored prices)
+  const subtotal = cart.items.reduce(
+    (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+    0
+  )
   const estimatedShipping = ESTIMATED_SHIPPING_NGN
   const total = subtotal + estimatedShipping
 

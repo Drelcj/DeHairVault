@@ -62,7 +62,9 @@ export function CartItem({ item }: CartItemProps) {
   }
 
   const imageUrl = item.product.thumbnail_url || item.product.images?.[0] || '/placeholder.jpg'
-  const totalPrice = item.unit_price_ngn * item.quantity
+  // Use current product price instead of stored price to reflect any price updates
+  const currentUnitPrice = item.product.base_price_ngn
+  const totalPrice = currentUnitPrice * item.quantity
   const productUrl = item.product.slug ? `/shop/${item.product.slug}` : '#'
 
   return (
@@ -108,10 +110,13 @@ export function CartItem({ item }: CartItemProps) {
             size="icon"
             className="h-7 w-7"
             onClick={() => handleUpdateQuantity(item.quantity + 1)}
-            disabled={isUpdating}
+            disabled={isUpdating || item.quantity >= item.product.stock_quantity}
           >
             <Plus className="h-3 w-3" />
           </Button>
+          {item.quantity >= item.product.stock_quantity && (
+            <span className="text-xs text-muted-foreground">Max</span>
+          )}
         </div>
       </div>
 

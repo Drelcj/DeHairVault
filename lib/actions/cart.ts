@@ -181,6 +181,26 @@ export async function updateCartItemQuantity(
       return removeFromCart(cartItemId)
     }
 
+    // Get cart item with product to check stock
+    const { data: cartItem, error: fetchError } = await supabase
+      .from('cart_items')
+      .select('*, product:products(*)')
+      .eq('id', cartItemId)
+      .single()
+
+    if (fetchError || !cartItem) {
+      return { success: false, error: 'Cart item not found' }
+    }
+
+    // Check stock quantity
+    const product = (cartItem as any).product
+    if (product && quantity > product.stock_quantity) {
+      return { 
+        success: false, 
+        error: `Only ${product.stock_quantity} items available in stock` 
+      }
+    }
+
     const { error } = await (supabase as any)
       .from('cart_items')
       .update({

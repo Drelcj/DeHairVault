@@ -3,9 +3,13 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { addToCart } from '@/lib/actions/cart'
+import { useCart } from '@/contexts/cart-context'
+import { toast } from 'sonner'
 import type { Product } from '@/types/database.types'
 
 interface ProductDetailClientProps {
@@ -56,6 +60,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [quantity, setQuantity] = useState(1)
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  
+  const { refreshCart, openCart } = useCart()
+  const router = useRouter()
   
   // Debug: Log on mount
   useEffect(() => {
@@ -68,6 +76,30 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const images = productImages.length > 0 ? productImages : [product.thumbnail_url || '']
   const currentImage = images[selectedImageIndex] || ''
   const fallbackImage = '/placeholder.jpg'
+
+  // Handle Add to Cart
+  const handleAddToCart = async () => {
+    setIsAddingToCart(true)
+    try {
+      const result = await addToCart(product.id, quantity, selectedLength)
+      
+      if (result.success) {
+        await refreshCart()
+        toast.success(`${product.name} added to cart!`)
+        openCart()
+      } else if (result.requiresAuth) {
+        toast.info('Please log in to add items to your cart')
+        router.push('/login?redirect=' + encodeURIComponent(`/shop/${product.slug}`))
+      } else {
+        toast.error(result.error || 'Failed to add to cart')
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast.error('Failed to add to cart')
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
 
   return (
     <div className="container mx-auto px-6 lg:px-12 py-12">
@@ -226,10 +258,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           <div className="flex gap-3">
             <Button
               className="flex-1 h-12 bg-gradient-to-r from-accent to-primary hover:opacity-90 text-accent-foreground font-medium gap-2"
-              disabled={product.stock_quantity === 0}
+              disabled={product.stock_quantity === 0 || isAddingToCart}
+              onClick={handleAddToCart}
             >
               <ShoppingBag className="h-5 w-5" />
-              {product.stock_quantity > 0 ? 'Add to Cart' : 'Out of Stock'}
+              {isAddingToCart ? 'Adding...' : product.stock_quantity > 0 ? 'Add to Cart' : 'Out of Stock'}
             </Button>
             <Button
               variant="outline"
