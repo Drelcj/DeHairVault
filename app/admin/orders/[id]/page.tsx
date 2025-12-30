@@ -2,6 +2,7 @@ import Link from "next/link"
 import { HeaderShell } from "@/components/header-shell"
 import { formatPrice } from "@/lib/utils/currency"
 import { OrderStatusActions } from "./_components/order-status-actions"
+import { createServiceClient } from "@/lib/supabase/server"
 
 export const dynamic = 'force-dynamic'
 
@@ -11,21 +12,34 @@ export const metadata = {
 
 async function getOrder(id: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
-    const res = await fetch(`${baseUrl}/api/admin/orders/${id}`, { cache: 'no-store' })
-    if (!res.ok) {
-      console.error('Failed to fetch order:', res.status)
+    const supabase = createServiceClient()
+    
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .single()
+    
+    if (error) {
+      console.error('Failed to fetch order:', error)
       return null
     }
-    return res.json()
+
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('id, product_name, selected_length, quantity, unit_price_ngn, total_price_ngn')
+      .eq('order_id', id)
+
+    return { order, items: items ?? [] }
   } catch (error) {
     console.error('Error fetching order:', error)
     return null
   }
 }
 
-export default async function AdminOrderDetailPage({ params }: { params: { id: string } }) {
-  const data = await getOrder(params.id)
+export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const data = await getOrder(id)
   const order = data?.order
   const items = data?.items ?? []
 
@@ -81,7 +95,7 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
               </div>
             </div>
 
-            <OrderStatusActions orderId={params.id} currentStatus={order?.status || 'PENDING'} />
+            <OrderStatusActions orderId={id} currentStatus={order?.status || 'PENDING'} />
           </div>
 
           <div className="grid gap-6">

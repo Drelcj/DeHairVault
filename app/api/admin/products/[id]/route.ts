@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
 // GET /api/admin/products/:id
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   const user = auth?.user
@@ -17,7 +18,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const { data: product, error } = await serviceClient
     .from('products')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -26,13 +27,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const { data: variants } = await serviceClient
     .from('product_variants')
     .select('*')
-    .eq('product_id', params.id)
+    .eq('product_id', id)
 
   return NextResponse.json({ product, variants: variants || [] })
 }
 
 // PATCH /api/admin/products/:id
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   const user = auth?.user
@@ -57,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { error: updateError } = await (serviceClient as any)
     .from('products')
     .update(updatePayload)
-    .eq('id', params.id)
+    .eq('id', id)
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
@@ -65,7 +67,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     admin_id: user.id,
     action: 'UPDATE_PRODUCT',
     resource_type: 'product',
-    resource_id: params.id,
+    resource_id: id,
     changes: updatePayload,
   }
 
@@ -74,7 +76,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { data: updated } = await supabase
     .from('products')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   return NextResponse.json({ product: updated })

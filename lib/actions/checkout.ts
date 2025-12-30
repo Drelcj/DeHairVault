@@ -306,6 +306,44 @@ export async function getOrderByNumber(orderNumber: string) {
   }
 }
 
+// Get order by ID (for authenticated user only)
+export async function getUserOrderById(orderId: string) {
+  try {
+    const supabase = await createClient()
+
+    // Get current user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return null
+    }
+
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select(
+        `
+        *,
+        order_items:order_items(*)
+      `
+      )
+      .eq('id', orderId)
+      .eq('user_id', user.id) // Ensure user can only view their own orders
+      .single()
+
+    if (error) {
+      console.error('Error fetching order:', error)
+      return null
+    }
+
+    return order as any
+  } catch (error) {
+    console.error('Error in getUserOrderById:', error)
+    return null
+  }
+}
+
 // Apply coupon code
 export async function applyCoupon(
   code: string,
@@ -519,5 +557,56 @@ export async function getExchangeRates() {
   } catch (error) {
     console.error('Error in getExchangeRates:', error)
     return []
+  }
+}
+
+// Get orders for the authenticated user
+export async function getUserOrders() {
+  try {
+    const supabase = await createClient()
+
+    // Get current user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Not authenticated', orders: [] }
+    }
+
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        status,
+        payment_status,
+        total_ngn,
+        total_display_currency,
+        display_currency,
+        created_at,
+        shipping_country,
+        shipping_city,
+        order_items (
+          id,
+          product_name,
+          quantity,
+          unit_price_ngn,
+          total_price_ngn,
+          selected_length
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching user orders:', error)
+      return { success: false, error: 'Failed to fetch orders', orders: [] }
+    }
+
+    return { success: true, orders: orders || [] }
+  } catch (error) {
+    console.error('Error in getUserOrders:', error)
+    return { success: false, error: 'An unexpected error occurred', orders: [] }
   }
 }

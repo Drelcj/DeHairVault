@@ -23,11 +23,13 @@ interface UserData {
 
 interface CustomerWithStats extends UserData {
   order_count: number
+  successful_order_count: number
   total_spent: number
 }
 
 interface OrderData {
   total_ngn: number
+  status: string
 }
 
 async function getCustomers(): Promise<CustomerWithStats[]> {
@@ -51,16 +53,23 @@ async function getCustomers(): Promise<CustomerWithStats[]> {
     users.map(async (user) => {
       const { data: ordersData } = await supabase
         .from('orders')
-        .select('total_ngn')
+        .select('total_ngn, status')
         .eq('user_id', user.id)
 
       const orders = ordersData as OrderData[] | null
       const orderCount = orders?.length || 0
-      const totalSpent = orders?.reduce((sum, o) => sum + Number(o.total_ngn || 0), 0) || 0
+      // Count orders with CONFIRMED, PROCESSING, SHIPPED, or DELIVERED status as successful
+      const successfulStatuses = ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED']
+      const successfulOrderCount = orders?.filter(o => successfulStatuses.includes(o.status))?.length || 0
+      // Only count total spent from successful orders
+      const totalSpent = orders
+        ?.filter(o => successfulStatuses.includes(o.status))
+        ?.reduce((sum, o) => sum + Number(o.total_ngn || 0), 0) || 0
 
       return {
         ...user,
         order_count: orderCount,
+        successful_order_count: successfulOrderCount,
         total_spent: totalSpent,
       }
     })
@@ -175,6 +184,7 @@ export default async function CustomersPage() {
                 <th className="px-6 py-4 text-left font-medium text-muted-foreground">Contact</th>
                 <th className="px-6 py-4 text-left font-medium text-muted-foreground">Location</th>
                 <th className="px-6 py-4 text-left font-medium text-muted-foreground">Orders</th>
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Successful</th>
                 <th className="px-6 py-4 text-left font-medium text-muted-foreground">Total Spent</th>
                 <th className="px-6 py-4 text-left font-medium text-muted-foreground">Joined</th>
               </tr>
@@ -182,7 +192,7 @@ export default async function CustomersPage() {
             <tbody className="divide-y divide-border">
               {customers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <Users className="mx-auto h-12 w-12 text-muted-foreground/50" />
                     <p className="mt-4 text-muted-foreground">No customers found</p>
                   </td>
@@ -226,6 +236,11 @@ export default async function CustomersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-medium">{customer.order_count}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`font-medium ${customer.successful_order_count > 0 ? 'text-green-600' : ''}`}>
+                        {customer.successful_order_count}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-medium">
