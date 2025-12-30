@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { getCart, type CartWithItems } from '@/lib/actions/cart'
+import { getCart, type CartWithItems, type CartItemWithProduct } from '@/lib/actions/cart'
 
 interface CartContextType {
   cart: CartWithItems | null
@@ -11,6 +11,9 @@ interface CartContextType {
   closeCart: () => void
   toggleCart: () => void
   refreshCart: () => Promise<void>
+  updateItemQuantityOptimistic: (itemId: string, newQuantity: number) => void
+  removeItemOptimistic: (itemId: string) => void
+  revertCart: (previousCart: CartWithItems | null) => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -41,6 +44,57 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Optimistic update for quantity changes - updates UI immediately
+  const updateItemQuantityOptimistic = useCallback((itemId: string, newQuantity: number) => {
+    setCart((prevCart) => {
+      if (!prevCart) return null
+      
+      const updatedItems = prevCart.items.map((item) =>
+        item.id === itemId ? { ...item, quantity: newQuantity } : item
+      )
+      
+      const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+      const subtotalNgn = updatedItems.reduce(
+        (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+        0
+      )
+      
+      return {
+        ...prevCart,
+        items: updatedItems,
+        itemCount,
+        subtotalNgn,
+      }
+    })
+  }, [])
+
+  // Optimistic remove - updates UI immediately
+  const removeItemOptimistic = useCallback((itemId: string) => {
+    setCart((prevCart) => {
+      if (!prevCart) return null
+      
+      const updatedItems = prevCart.items.filter((item) => item.id !== itemId)
+      
+      const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+      const subtotalNgn = updatedItems.reduce(
+        (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+        0
+      )
+      
+      return {
+        ...prevCart,
+        items: updatedItems,
+        itemCount,
+        subtotalNgn,
+      }
+    })
+  }, [])
+
+  // Revert cart to previous state (used when server update fails)
+  const revertCart = useCallback((previousCart: CartWithItems | null) => {
+    setCart(previousCart)
+  }, [])
+
   // Load cart on mount
   useEffect(() => {
     refreshCart()
@@ -58,6 +112,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     closeCart,
     toggleCart,
     refreshCart,
+    updateItemQuantityOptimistic,
+    removeItemOptimistic,
+    revertCart,
   }
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

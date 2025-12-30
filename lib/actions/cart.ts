@@ -281,10 +281,10 @@ export async function getCart(): Promise<CartWithItems | null> {
     const validItems = (items || []).filter((item: any) => item.product !== null)
     const cartItems = validItems as unknown as CartItemWithProduct[]
 
-    // Calculate totals
+    // Calculate totals using current product prices (not stored prices at time of adding)
     const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
     const subtotalNgn = cartItems.reduce(
-      (sum, item) => sum + item.unit_price_ngn * item.quantity,
+      (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
       0
     )
 

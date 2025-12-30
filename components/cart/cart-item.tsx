@@ -23,21 +23,30 @@ function formatPrice(priceNgn: number): string {
 }
 
 export function CartItem({ item }: CartItemProps) {
-  const { refreshCart } = useCart()
+  const { cart, updateItemQuantityOptimistic, removeItemOptimistic, revertCart, refreshCart } = useCart()
   const [isUpdating, setIsUpdating] = useState(false)
 
   const handleUpdateQuantity = async (newQuantity: number) => {
-    if (newQuantity < 1) return
+    if (newQuantity < 1 || isUpdating) return
 
+    // Save current cart state for potential rollback
+    const previousCart = cart
+    
+    // Optimistically update the UI immediately
+    updateItemQuantityOptimistic(item.id, newQuantity)
+    
     setIsUpdating(true)
     try {
       const result = await updateCartItemQuantity(item.id, newQuantity)
-      if (result.success) {
-        await refreshCart()
-      } else {
+      if (!result.success) {
+        // Revert on error
+        revertCart(previousCart)
         toast.error(result.error || 'Failed to update quantity')
       }
+      // No need to refresh on success - optimistic update already applied
     } catch (error) {
+      // Revert on error
+      revertCart(previousCart)
       toast.error('Failed to update quantity')
     } finally {
       setIsUpdating(false)
@@ -45,16 +54,27 @@ export function CartItem({ item }: CartItemProps) {
   }
 
   const handleRemove = async () => {
+    if (isUpdating) return
+    
+    // Save current cart state for potential rollback
+    const previousCart = cart
+    
+    // Optimistically remove from UI immediately
+    removeItemOptimistic(item.id)
+    
     setIsUpdating(true)
     try {
       const result = await removeFromCart(item.id)
       if (result.success) {
-        await refreshCart()
         toast.success('Item removed from cart')
       } else {
+        // Revert on error
+        revertCart(previousCart)
         toast.error(result.error || 'Failed to remove item')
       }
     } catch (error) {
+      // Revert on error
+      revertCart(previousCart)
       toast.error('Failed to remove item')
     } finally {
       setIsUpdating(false)

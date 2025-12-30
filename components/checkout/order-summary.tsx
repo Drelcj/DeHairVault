@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { Truck, Info } from 'lucide-react'
 import type { CartWithItems } from '@/lib/actions/cart'
 
 interface OrderSummaryProps {
@@ -24,7 +25,11 @@ export function OrderSummary({
   couponCode,
   onRemoveCoupon,
 }: OrderSummaryProps) {
-  const subtotal = cart.subtotalNgn
+  // Calculate subtotal using current product prices
+  const subtotal = cart.items.reduce(
+    (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+    0
+  )
   const total = subtotal + shippingCost + tax - discount
   const totalInDisplayCurrency = total / exchangeRate
 
@@ -69,8 +74,11 @@ export function OrderSummary({
               {item.selected_length && (
                 <p className="text-sm text-muted-foreground">{item.selected_length} inches</p>
               )}
+              <p className="text-sm text-muted-foreground">
+                Qty: {item.quantity} × {formatNGN(item.product.base_price_ngn)}
+              </p>
               <p className="mt-1 text-sm font-medium text-foreground">
-                {formatNGN(item.unit_price_ngn * item.quantity)}
+                {formatNGN(item.product.base_price_ngn * item.quantity)}
               </p>
             </div>
           </div>
@@ -117,9 +125,13 @@ export function OrderSummary({
           <span className="text-muted-foreground">Subtotal</span>
           <span className="font-medium text-foreground">{formatNGN(subtotal)}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Shipping</span>
-          <span className="font-medium text-foreground">{formatNGN(shippingCost)}</span>
+        {/* Shipping Notice - calculated separately until DHL integration */}
+        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3">
+          <Truck className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+          <div className="space-y-1">
+            <span className="text-amber-800 dark:text-amber-200 font-medium">Shipping calculated separately</span>
+            <p className="text-amber-700 dark:text-amber-300">Our team will contact you with shipping costs after your order is placed.</p>
+          </div>
         </div>
         {tax > 0 && (
           <div className="flex justify-between">

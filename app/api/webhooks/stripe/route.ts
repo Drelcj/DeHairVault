@@ -3,9 +3,8 @@ import Stripe from 'stripe'
 import { updateOrderStatus, clearCartAfterOrder } from '@/lib/actions/checkout'
 import { OrderStatus } from '@/types/database.types'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-11-17.clover',
-})
+// Initialize Stripe - let SDK use its default API version
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
