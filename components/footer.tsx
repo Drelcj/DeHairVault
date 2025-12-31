@@ -4,21 +4,20 @@ import { Instagram, Facebook, Twitter, Youtube } from "lucide-react"
 const footerLinks = {
   shop: [
     { name: "All Products", href: "/shop" },
-    { name: "Bundles", href: "/shop/bundles" },
-    { name: "Closures", href: "/shop/closures" },
-    { name: "Wigs", href: "/shop/wigs" },
+    { name: "Bundles", href: "/shop?category=bundles" },
+    { name: "Closures", href: "/shop?category=closure" },
+    { name: "Wigs", href: "/shop?category=wig" },
   ],
   support: [
     { name: "Contact Us", href: "/contact" },
     { name: "FAQs", href: "/faqs" },
-    { name: "Shipping", href: "/shipping" },
-    { name: "Returns", href: "/returns" },
+    { name: "Shipping", href: "/policies#shipping" },
+    { name: "Returns", href: "/policies#returns" },
   ],
   company: [
     { name: "About Us", href: "/about" },
-    { name: "Our Story", href: "/story" },
-    { name: "Careers", href: "/careers" },
-    { name: "Press", href: "/press" },
+    { name: "Our Story", href: "/about#story" },
+    { name: "Policies", href: "/policies" },
   ],
 }
 
@@ -116,10 +115,10 @@ export function Footer() {
             © {new Date().getFullYear()} Dehair Vault. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+            <Link href="/policies#privacy" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+            <Link href="/policies#terms" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Terms of Service
             </Link>
           </div>

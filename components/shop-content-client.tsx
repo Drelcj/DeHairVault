@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { ShopSidebar } from "./shop-sidebar"
 import { ProductGrid } from "./product-grid"
 import { ShopToolbar } from "./shop-toolbar"
 import { SlidersHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
-import type { Product, HairTexture } from "@/types/database.types"
+import type { Product, HairTexture, HairCategory } from "@/types/database.types"
 
 export interface FilterState {
+  category: HairCategory | null
   textures: HairTexture[]
   lengths: number[]
   priceRange: [number, number]
@@ -22,16 +24,35 @@ interface ShopContentClientProps {
 }
 
 export function ShopContentClient({ initialProducts, minPrice, maxPrice }: ShopContentClientProps) {
+  const searchParams = useSearchParams()
+  
+  // Get category from URL query params
+  const categoryParam = searchParams.get("category")?.toUpperCase() as HairCategory | null
+  
   const [filters, setFilters] = useState<FilterState>({
+    category: categoryParam || null,
     textures: [],
     lengths: [],
     priceRange: [minPrice, maxPrice],
   })
+  
+  // Update category filter when URL changes
+  useEffect(() => {
+    const newCategory = searchParams.get("category")?.toUpperCase() as HairCategory | null
+    if (newCategory !== filters.category) {
+      setFilters(prev => ({ ...prev, category: newCategory || null }))
+    }
+  }, [searchParams, filters.category])
   const [sortBy, setSortBy] = useState("featured")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   const filteredProducts = useMemo(() => {
     let result = [...initialProducts]
+
+    // Apply category filter
+    if (filters.category) {
+      result = result.filter((p) => p.category === filters.category)
+    }
 
     // Apply texture filter
     if (filters.textures.length > 0) {
@@ -69,6 +90,7 @@ export function ShopContentClient({ initialProducts, minPrice, maxPrice }: ShopC
   }, [initialProducts, filters, sortBy])
 
   const activeFilterCount =
+    (filters.category ? 1 : 0) +
     filters.textures.length +
     filters.lengths.length +
     (filters.priceRange[0] > minPrice || filters.priceRange[1] < maxPrice ? 1 : 0)

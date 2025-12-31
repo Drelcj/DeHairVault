@@ -1,12 +1,13 @@
 "use client"
 
 import type React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { HairTexture } from "@/types/database.types"
+import { HairTexture, HairCategory } from "@/types/database.types"
 import type { FilterState } from "./shop-content-client"
 
 interface ShopSidebarProps {
@@ -17,6 +18,15 @@ interface ShopSidebarProps {
 }
 
 // Map database enum values to display labels
+const categoryOptions: { value: HairCategory; label: string }[] = [
+  { value: HairCategory.BUNDLES, label: "Bundles" },
+  { value: HairCategory.CLOSURE, label: "Closures" },
+  { value: HairCategory.FRONTAL, label: "Frontals" },
+  { value: HairCategory.WIG, label: "Wigs" },
+  { value: HairCategory.PONYTAIL, label: "Ponytails" },
+  { value: HairCategory.CLIP_INS, label: "Clip-Ins" },
+]
+
 const textureOptions: { value: HairTexture; label: string }[] = [
   { value: HairTexture.STRAIGHT, label: "Straight" },
   { value: HairTexture.BODY_WAVE, label: "Body Wave" },
@@ -32,6 +42,25 @@ const textureOptions: { value: HairTexture; label: string }[] = [
 const lengthOptions = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
 
 export function ShopSidebar({ filters, setFilters, minPrice, maxPrice }: ShopSidebarProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  const handleCategoryChange = (category: HairCategory | null) => {
+    setFilters((prev) => ({
+      ...prev,
+      category,
+    }))
+    
+    // Update URL params
+    const params = new URLSearchParams(searchParams.toString())
+    if (category) {
+      params.set("category", category.toLowerCase())
+    } else {
+      params.delete("category")
+    }
+    router.push(`/shop${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+  }
+
   const handleTextureChange = (texture: HairTexture, checked: boolean) => {
     setFilters((prev) => ({
       ...prev,
@@ -55,13 +84,16 @@ export function ShopSidebar({ filters, setFilters, minPrice, maxPrice }: ShopSid
 
   const clearAllFilters = () => {
     setFilters({
+      category: null,
       textures: [],
       lengths: [],
       priceRange: [minPrice, maxPrice],
     })
+    router.push("/shop", { scroll: false })
   }
 
   const hasActiveFilters =
+    filters.category !== null ||
     filters.textures.length > 0 ||
     filters.lengths.length > 0 ||
     filters.priceRange[0] > minPrice ||
@@ -92,6 +124,46 @@ export function ShopSidebar({ filters, setFilters, minPrice, maxPrice }: ShopSid
           </Button>
         )}
       </div>
+
+      {/* Category Filter */}
+      <div className="space-y-4">
+        <h4 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Category</h4>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="category-all"
+              checked={filters.category === null}
+              onCheckedChange={() => handleCategoryChange(null)}
+              className="border-border data-[state=checked]:bg-accent data-[state=checked]:border-accent"
+            />
+            <Label
+              htmlFor="category-all"
+              className="text-sm text-foreground cursor-pointer hover:text-accent transition-colors"
+            >
+              All Products
+            </Label>
+          </div>
+          {categoryOptions.map(({ value, label }) => (
+            <div key={value} className="flex items-center gap-3">
+              <Checkbox
+                id={`category-${value}`}
+                checked={filters.category === value}
+                onCheckedChange={() => handleCategoryChange(filters.category === value ? null : value)}
+                className="border-border data-[state=checked]:bg-accent data-[state=checked]:border-accent"
+              />
+              <Label
+                htmlFor={`category-${value}`}
+                className="text-sm text-foreground cursor-pointer hover:text-accent transition-colors"
+              >
+                {label}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="h-px bg-border" />
 
       {/* Texture Filter */}
       <div className="space-y-4">

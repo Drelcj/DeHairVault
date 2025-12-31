@@ -22,7 +22,7 @@ const missionPoints = [
 
 export function MissionSection() {
   return (
-    <section className="py-20 lg:py-32 relative overflow-hidden">
+    <section id="story" className="py-20 lg:py-32 relative overflow-hidden scroll-mt-24">
       {/* Subtle gradient accent */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
 
