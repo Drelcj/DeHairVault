@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useCart } from "@/contexts/cart-context"
+import { CurrencySelector } from "@/components/currency-selector"
 
 type HeaderProps = {
   isAuthed?: boolean
@@ -198,6 +199,11 @@ export function Header({ isAuthed = false, isAdmin = false, role = null }: Heade
 
           {/* Right Actions */}
           <div className="flex items-center gap-4">
+            {/* Currency Selector - Desktop */}
+            <div className="hidden md:block">
+              <CurrencySelector variant="compact" />
+            </div>
+
             {/* Theme Toggle */}
             {mounted && (
               <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full hover:bg-secondary">
@@ -304,6 +310,12 @@ export function Header({ isAuthed = false, isAdmin = false, role = null }: Heade
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border">
             <div className="container px-6 py-8 flex flex-col gap-6">
+              {/* Currency Selector - Mobile */}
+              <div className="pb-4 border-b border-border">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Currency</p>
+                <CurrencySelector variant="default" />
+              </div>
+
               <Link
                 href="/shop"
                 className="text-lg font-medium text-foreground hover:text-accent transition-colors"

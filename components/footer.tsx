@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Instagram, Facebook, Twitter, Youtube } from "lucide-react"
+import { CurrencySelector } from "@/components/currency-selector"
 
 const footerLinks = {
   shop: [
@@ -114,7 +115,8 @@ export function Footer() {
           <p className="text-muted-foreground text-sm">
             © {new Date().getFullYear()} Dehair Vault. All rights reserved.
           </p>
-          <div className="flex gap-6">
+          <div className="flex items-center gap-6">
+            <CurrencySelector variant="compact" />
             <Link href="/policies#privacy" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
               Privacy Policy
             </Link>

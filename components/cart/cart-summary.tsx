@@ -5,18 +5,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/contexts/cart-context'
+import { useCurrency } from '@/contexts/currency-context'
 import { Truck, X, Info } from 'lucide-react'
-
-function formatPrice(priceNgn: number): string {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(priceNgn)
-}
 
 export function CartSummary() {
   const { cart, closeCart } = useCart()
+  const { formatPrice, currency } = useCurrency()
   const router = useRouter()
   const [showShippingModal, setShowShippingModal] = useState(false)
 
@@ -26,7 +20,7 @@ export function CartSummary() {
 
   // Calculate subtotal using current product prices (not stored prices)
   const subtotal = cart.items.reduce(
-    (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+    (sum, item) => sum + (item.product.base_price_gbp * item.quantity),
     0
   )
 

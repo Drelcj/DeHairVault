@@ -16,7 +16,7 @@ interface ProductInventory {
   stock_quantity: number
   low_stock_threshold: number
   images: string[] | null
-  base_price_ngn: number
+  base_price_gbp: number
   category: string
   is_active?: boolean
 }
@@ -32,7 +32,7 @@ async function getInventoryStats() {
   // Get low stock products (stock_quantity <= low_stock_threshold)
   const { data: lowStockProducts } = await supabase
     .from('products')
-    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_ngn, category')
+    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_gbp, category')
     .lte('stock_quantity', 10)
     .gt('stock_quantity', 0)
     .order('stock_quantity', { ascending: true })
@@ -40,23 +40,23 @@ async function getInventoryStats() {
   // Get out of stock products
   const { data: outOfStockProducts } = await supabase
     .from('products')
-    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_ngn, category')
+    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_gbp, category')
     .eq('stock_quantity', 0)
 
   // Get all products for inventory table
   const { data: allProducts } = await supabase
     .from('products')
-    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_ngn, category, is_active')
+    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_gbp, category, is_active')
     .order('stock_quantity', { ascending: true })
     .limit(100)
 
   // Calculate total inventory value
   const { data: inventoryValue } = await supabase
     .from('products')
-    .select('stock_quantity, base_price_ngn')
+    .select('stock_quantity, base_price_gbp')
 
-  const products = inventoryValue as { stock_quantity: number; base_price_ngn: number }[] | null
-  const totalValue = products?.reduce((sum, p) => sum + (p.stock_quantity * p.base_price_ngn), 0) || 0
+  const products = inventoryValue as { stock_quantity: number; base_price_gbp: number }[] | null
+  const totalValue = products?.reduce((sum, p) => sum + (p.stock_quantity * p.base_price_gbp), 0) || 0
 
   return {
     totalProducts: totalProducts || 0,
@@ -253,10 +253,10 @@ export default async function InventoryPage() {
                       {product.low_stock_threshold}
                     </td>
                     <td className="px-6 py-4">
-                      {formatPrice(product.base_price_ngn, 'NGN')}
+                      {formatPrice(product.base_price_gbp, 'GBP')}
                     </td>
                     <td className="px-6 py-4 font-medium">
-                      {formatPrice(product.stock_quantity * product.base_price_ngn, 'NGN')}
+                      {formatPrice(product.stock_quantity * product.base_price_gbp, 'GBP')}
                     </td>
                     <td className="px-6 py-4">
                       <StockStatusBadge 

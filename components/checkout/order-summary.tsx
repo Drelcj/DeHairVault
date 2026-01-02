@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { Truck, Info } from 'lucide-react'
+import { useCurrency } from '@/contexts/currency-context'
 import type { CartWithItems } from '@/lib/actions/cart'
 
 interface OrderSummaryProps {
@@ -25,25 +26,19 @@ export function OrderSummary({
   couponCode,
   onRemoveCoupon,
 }: OrderSummaryProps) {
+  const { formatPrice, currency } = useCurrency()
+  
   // Calculate subtotal using current product prices
   const subtotal = cart.items.reduce(
-    (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+    (sum, item) => sum + (item.product.base_price_gbp * item.quantity),
     0
   )
   const total = subtotal + shippingCost + tax - discount
-  const totalInDisplayCurrency = total / exchangeRate
 
-  const formatNGN = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
+  const formatGBP = (amount: number) => {
+    return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: 'NGN',
-    }).format(amount)
-  }
-
-  const formatDisplayCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: displayCurrency,
+      currency: 'GBP',
     }).format(amount)
   }
 
@@ -75,10 +70,10 @@ export function OrderSummary({
                 <p className="text-sm text-muted-foreground">{item.selected_length} inches</p>
               )}
               <p className="text-sm text-muted-foreground">
-                Qty: {item.quantity} × {formatNGN(item.product.base_price_ngn)}
+                Qty: {item.quantity} × {formatPrice(item.product.base_price_gbp)}
               </p>
               <p className="mt-1 text-sm font-medium text-foreground">
-                {formatNGN(item.product.base_price_ngn * item.quantity)}
+                {formatPrice(item.product.base_price_gbp * item.quantity)}
               </p>
             </div>
           </div>
@@ -123,7 +118,7 @@ export function OrderSummary({
       <div className="space-y-3 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-medium text-foreground">{formatNGN(subtotal)}</span>
+          <span className="font-medium text-foreground">{formatPrice(subtotal)}</span>
         </div>
         {/* Shipping Notice - calculated separately until DHL integration */}
         <div className="flex items-start gap-2 text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3">
@@ -136,13 +131,13 @@ export function OrderSummary({
         {tax > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Tax</span>
-            <span className="font-medium text-foreground">{formatNGN(tax)}</span>
+            <span className="font-medium text-foreground">{formatPrice(tax)}</span>
           </div>
         )}
         {discount > 0 && (
           <div className="flex justify-between text-green-600 dark:text-green-400">
             <span>Discount</span>
-            <span className="font-medium">-{formatNGN(discount)}</span>
+            <span className="font-medium">-{formatPrice(discount)}</span>
           </div>
         )}
       </div>
@@ -153,24 +148,26 @@ export function OrderSummary({
       {/* Total */}
       <div className="space-y-2">
         <div className="flex justify-between text-lg font-medium">
-          <span className="text-foreground">Total (NGN)</span>
-          <span className="text-foreground">{formatNGN(total)}</span>
+          <span className="text-foreground">Total</span>
+          <span className="text-foreground">{formatPrice(total)}</span>
         </div>
-        {displayCurrency !== 'NGN' && (
+        {currency !== 'NGN' && (
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Approx. in {displayCurrency}</span>
-            <span>{formatDisplayCurrency(totalInDisplayCurrency)}</span>
+            <span>Original (NGN)</span>
+            <span>{formatNGN(total)}</span>
           </div>
         )}
       </div>
 
       {/* Currency Note */}
-      <div className="mt-4 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-        <p>
-          All prices are in Nigerian Naira (NGN). The converted price is an estimate based on
-          current exchange rates and may vary slightly at the time of payment.
-        </p>
-      </div>
+      {currency !== 'NGN' && (
+        <div className="mt-4 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+          <p>
+            Prices shown in {currency} are estimates based on current exchange rates. 
+            Your payment will be processed and the final amount may vary slightly.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

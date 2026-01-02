@@ -35,12 +35,12 @@ export async function getProducts(filters?: ProductFilters): Promise<Product[]> 
       query = query.in('texture', filters.textures)
     }
 
-    // Apply price range filter
+    // Apply price range filter (GBP)
     if (filters?.minPrice !== undefined) {
-      query = query.gte('base_price_ngn', filters.minPrice)
+      query = query.gte('base_price_gbp', filters.minPrice)
     }
     if (filters?.maxPrice !== undefined) {
-      query = query.lte('base_price_ngn', filters.maxPrice)
+      query = query.lte('base_price_gbp', filters.maxPrice)
     }
 
     // Apply category filter

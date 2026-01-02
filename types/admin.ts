@@ -7,7 +7,7 @@ export interface ProductVariantInput {
   id?: string
   length: number
   sku: string
-  price_override_ngn: number | null
+  price_override_gbp: number | null
   stock_quantity: number
   weight_grams: number | null
 }
@@ -24,9 +24,9 @@ export interface ProductFormValues {
   category: HairCategory
   draw_type: DrawType | null
   available_lengths: number[]
-  base_price_ngn: number
-  compare_at_price_ngn: number | null
-  cost_price_ngn: number | null
+  base_price_gbp: number
+  compare_at_price_gbp: number | null
+  cost_price_gbp: number | null
   length_price_modifiers: Record<string, number> | null
   stock_quantity: number
   low_stock_threshold: number

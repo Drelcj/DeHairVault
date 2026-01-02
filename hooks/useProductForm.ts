@@ -16,9 +16,9 @@ const defaultValues: ProductFormValues = {
   category: HairCategory.BUNDLES,
   draw_type: null,
   available_lengths: [14, 16, 18],
-  base_price_ngn: 0,
-  compare_at_price_ngn: null,
-  cost_price_ngn: null,
+  base_price_gbp: 0,
+  compare_at_price_gbp: null,
+  cost_price_gbp: null,
   length_price_modifiers: null,
   stock_quantity: 0,
   low_stock_threshold: 5,
@@ -84,7 +84,7 @@ export function useProductForm(initial?: Partial<ProductFormValues>) {
     const newVariant: ProductVariantInput = {
       length: 14,
       sku: '',
-      price_override_ngn: null,
+      price_override_gbp: null,
       stock_quantity: 0,
       weight_grams: null,
     }

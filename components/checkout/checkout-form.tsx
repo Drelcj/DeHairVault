@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PaymentMethod } from './payment-method'
 import { OrderSummary } from './order-summary'
+import { useCurrency } from '@/contexts/currency-context'
 import type { CartWithItems } from '@/lib/actions/cart'
 import { createOrder, applyCoupon, type CheckoutFormData } from '@/lib/actions/checkout'
 
@@ -44,6 +45,7 @@ interface CheckoutFormProps {
 
 export function CheckoutForm({ cart }: CheckoutFormProps) {
   const router = useRouter()
+  const { currency, getRate, formatPrice } = useCurrency()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [couponCode, setCouponCode] = useState('')
@@ -52,9 +54,9 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
   const [couponError, setCouponError] = useState<string | null>(null)
   
-  // For now, use NGN as default. In production, fetch from exchange_rates table
-  const [displayCurrency] = useState('NGN')
-  const [exchangeRate] = useState(1)
+  // Use currency context for display - orders are always stored in NGN
+  const displayCurrency = currency
+  const exchangeRate = getRate()
 
   const {
     register,

@@ -19,16 +19,16 @@ export async function GET() {
       )
     }
 
-    // Always ensure NGN rate exists (base rate)
-    const hasNgn = rates?.some(r => r.currency_code === 'NGN')
-    const ratesWithNgn = hasNgn 
+    // Always ensure GBP rate exists (base rate = 1)
+    const hasGbp = rates?.some(r => r.currency_code === 'GBP')
+    const ratesWithGbp = hasGbp 
       ? rates 
       : [
           {
-            id: 'ngn-base',
-            currency_code: 'NGN',
-            rate_to_ngn: 1,
-            symbol: '₦',
+            id: 'gbp-base',
+            currency_code: 'GBP',
+            rate_from_gbp: 1,
+            symbol: '£',
             is_active: true,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -37,7 +37,7 @@ export async function GET() {
         ]
 
     return NextResponse.json({
-      rates: ratesWithNgn,
+      rates: ratesWithGbp,
       success: true,
     })
   } catch (error) {

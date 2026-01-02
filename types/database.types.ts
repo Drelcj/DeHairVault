@@ -104,9 +104,9 @@ export interface Product {
   draw_type: DrawType | null;
   available_lengths: number[];
   grade_details: Record<string, any> | null;
-  base_price_ngn: number;
-  compare_at_price_ngn: number | null;
-  cost_price_ngn: number | null;
+  base_price_gbp: number;
+  compare_at_price_gbp: number | null;
+  cost_price_gbp: number | null;
   length_price_modifiers: Record<string, number> | null;
   stock_quantity: number;
   low_stock_threshold: number;
@@ -129,7 +129,7 @@ export interface ProductVariant {
   product_id: string;
   length: number;
   sku: string;
-  price_override_ngn: number | null;
+  price_override_gbp: number | null;
   stock_quantity: number;
   weight_grams: number | null;
   created_at: string;
@@ -229,7 +229,7 @@ export interface OrderItem {
 export interface ExchangeRate {
   id: string;
   currency_code: string;
-  rate_to_ngn: number;
+  rate_from_gbp: number;
   symbol: string;
   is_active: boolean;
   created_at: string;
@@ -241,8 +241,8 @@ export interface Coupon {
   code: string;
   discount_type: 'percentage' | 'fixed';
   discount_value: number;
-  minimum_order_ngn: number | null;
-  maximum_discount_ngn: number | null;
+  minimum_order_gbp: number | null;
+  maximum_discount_gbp: number | null;
   usage_limit: number | null;
   usage_limit_per_user: number | null;
   usage_count: number;

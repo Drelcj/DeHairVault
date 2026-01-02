@@ -4,7 +4,7 @@ import { useCurrency } from '@/contexts/currency-context'
 import { cn } from '@/lib/utils'
 
 interface PriceDisplayProps {
-  amountNgn: number
+  amountGbp: number
   showOriginal?: boolean
   className?: string
   originalClassName?: string
@@ -19,7 +19,7 @@ const sizeClasses = {
 }
 
 export function PriceDisplay({
-  amountNgn,
+  amountGbp,
   showOriginal = false,
   className,
   originalClassName,
@@ -29,10 +29,10 @@ export function PriceDisplay({
 
   return (
     <span className={cn(sizeClasses[size], 'font-medium', className)}>
-      {formatPrice(amountNgn)}
-      {showOriginal && currency !== 'NGN' && (
+      {formatPrice(amountGbp)}
+      {showOriginal && currency !== 'GBP' && (
         <span className={cn('text-muted-foreground text-sm ml-1', originalClassName)}>
-          (₦{amountNgn.toLocaleString()})
+          (£{amountGbp.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
         </span>
       )}
     </span>
@@ -55,12 +55,12 @@ export function CompareAtPrice({
   const { formatPrice } = useCurrency()
 
   if (!compareAtPrice || compareAtPrice <= basePrice) {
-    return <PriceDisplay amountNgn={basePrice} className={className} size={size} />
+    return <PriceDisplay amountGbp={basePrice} className={className} size={size} />
   }
 
   return (
     <div className={cn('flex flex-col', className)}>
-      <PriceDisplay amountNgn={basePrice} size={size} />
+      <PriceDisplay amountGbp={basePrice} size={size} />
       <span className="text-sm text-muted-foreground line-through">
         {formatPrice(compareAtPrice)}
       </span>

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { addToCart } from '@/lib/actions/cart'
 import { useCart } from '@/contexts/cart-context'
+import { useCurrency } from '@/contexts/currency-context'
 import { toast } from 'sonner'
 import type { Product } from '@/types/database.types'
 
@@ -19,15 +20,6 @@ interface ProductDetailClientProps {
 // Debug: Log when component mounts
 if (typeof window !== 'undefined') {
   console.log('[ProductDetailClient] Module loaded')
-}
-
-// Helper function to format price in Nigerian Naira
-function formatPrice(priceNgn: number): string {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(priceNgn)
 }
 
 // Helper function to format texture for display
@@ -63,6 +55,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   
   const { refreshCart, openCart } = useCart()
+  const { formatPrice } = useCurrency()
   const router = useRouter()
   
   // Debug: Log on mount
@@ -186,10 +179,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             
             {/* Price */}
             <div className="flex items-baseline gap-3">
-              <p className="text-3xl font-medium text-foreground">{formatPrice(product.base_price_ngn)}</p>
-              {product.compare_at_price_ngn && product.compare_at_price_ngn > product.base_price_ngn && (
+              <p className="text-3xl font-medium text-foreground">{formatPrice(product.base_price_gbp)}</p>
+              {product.compare_at_price_gbp && product.compare_at_price_gbp > product.base_price_gbp && (
                 <p className="text-xl text-muted-foreground line-through">
-                  {formatPrice(product.compare_at_price_ngn)}
+                  {formatPrice(product.compare_at_price_gbp)}
                 </p>
               )}
             </div>

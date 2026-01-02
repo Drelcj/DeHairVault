@@ -66,16 +66,16 @@ export function ShopContentClient({ initialProducts, minPrice, maxPrice }: ShopC
       )
     }
 
-    // Apply price range filter
-    result = result.filter((p) => p.base_price_ngn >= filters.priceRange[0] && p.base_price_ngn <= filters.priceRange[1])
+    // Apply price range filter (prices are in GBP)
+    result = result.filter((p) => p.base_price_gbp >= filters.priceRange[0] && p.base_price_gbp <= filters.priceRange[1])
 
     // Apply sorting
     switch (sortBy) {
       case "price-low":
-        result.sort((a, b) => a.base_price_ngn - b.base_price_ngn)
+        result.sort((a, b) => a.base_price_gbp - b.base_price_gbp)
         break
       case "price-high":
-        result.sort((a, b) => b.base_price_ngn - a.base_price_ngn)
+        result.sort((a, b) => b.base_price_gbp - a.base_price_gbp)
         break
       case "newest":
         result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

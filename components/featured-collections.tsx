@@ -3,6 +3,7 @@ import Image from "next/image"
 import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getFeaturedProducts } from "@/lib/actions/products"
+import { PriceDisplay } from "@/components/price-display"
 import type { Product } from "@/types/database.types"
 
 // Fallback images for when products don't have images
@@ -18,15 +19,6 @@ function formatTexture(texture: string): string {
     .split('_')
     .map(word => word.charAt(0) + word.slice(1).toLowerCase())
     .join(' ')
-}
-
-// Format price in Nigerian Naira
-function formatPrice(priceNgn: number): string {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(priceNgn)
 }
 
 export async function FeaturedCollections() {
@@ -110,9 +102,9 @@ export async function FeaturedCollections() {
                       <p className="text-muted-foreground text-sm mb-2">
                         {formatTexture(product.texture)} • {product.origin?.replace('_', ' ')}
                       </p>
-                      <p className="text-foreground font-semibold mb-3">
-                        {formatPrice(product.base_price_ngn)}
-                      </p>
+                      <div className="text-foreground font-semibold mb-3">
+                        <PriceDisplay amountGbp={product.base_price_gbp} />
+                      </div>
                       <div className="flex items-center text-accent font-medium text-sm group-hover:gap-2 transition-all">
                         <span>View Details</span>
                         <ArrowRight className="h-4 w-4 ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />

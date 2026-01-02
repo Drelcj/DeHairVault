@@ -71,7 +71,7 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
       finalSlug = generateProductSlug(form.values.name)
       form.updateField('slug', finalSlug)
     }
-    if (form.values.base_price_ngn <= 0) {
+    if (form.values.base_price_gbp <= 0) {
       form.setError('Price must be greater than 0')
       return
     }
@@ -262,45 +262,48 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-3">
-            <Label htmlFor="base_price_ngn">Base Price (NGN)</Label>
+            <Label htmlFor="base_price_gbp">Base Price (GBP)</Label>
             <Input
-              id="base_price_ngn"
+              id="base_price_gbp"
               type="number"
-              value={form.values.base_price_ngn}
-              onChange={(e) => form.updateField('base_price_ngn', Number(e.target.value))}
+              value={form.values.base_price_gbp}
+              onChange={(e) => form.updateField('base_price_gbp', Number(e.target.value))}
               min={0}
+              step="0.01"
               required
               className="bg-background"
             />
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="compare_at_price_ngn">Compare at Price (NGN)</Label>
+            <Label htmlFor="compare_at_price_gbp">Compare at Price (GBP)</Label>
             <Input
-              id="compare_at_price_ngn"
+              id="compare_at_price_gbp"
               type="number"
-              value={form.values.compare_at_price_ngn ?? ''}
+              value={form.values.compare_at_price_gbp ?? ''}
               onChange={(e) =>
                 form.updateField(
-                  'compare_at_price_ngn',
+                  'compare_at_price_gbp',
                   e.target.value ? Number(e.target.value) : null
                 )
               }
               min={0}
+              step="0.01"
               className="bg-background"
             />
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="cost_price_ngn">Cost Price (NGN)</Label>
+            <Label htmlFor="cost_price_gbp">Cost Price (GBP)</Label>
             <Input
-              id="cost_price_ngn"
+              id="cost_price_gbp"
               type="number"
-              value={form.values.cost_price_ngn ?? ''}
+              value={form.values.cost_price_gbp ?? ''}
               onChange={(e) =>
-                form.updateField('cost_price_ngn', e.target.value ? Number(e.target.value) : null)
+                form.updateField('cost_price_gbp', e.target.value ? Number(e.target.value) : null)
               }
               min={0}
+              step="0.01"
               className="bg-background"
             />
           </div>
@@ -507,13 +510,14 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Price Override (NGN)</Label>
+                  <Label className="text-xs">Price Override (GBP)</Label>
                   <Input
                     type="number"
-                    value={variant.price_override_ngn ?? ''}
+                    step="0.01"
+                    value={variant.price_override_gbp ?? ''}
                     onChange={(e) =>
                       form.updateVariant(index, {
-                        price_override_ngn: e.target.value ? Number(e.target.value) : null,
+                        price_override_gbp: e.target.value ? Number(e.target.value) : null,
                       })
                     }
                     min={0}

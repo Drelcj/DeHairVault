@@ -7,6 +7,7 @@ import { Minus, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { removeFromCart, updateCartItemQuantity } from '@/lib/actions/cart'
 import { useCart } from '@/contexts/cart-context'
+import { useCurrency } from '@/contexts/currency-context'
 import { toast } from 'sonner'
 import type { CartItemWithProduct } from '@/lib/actions/cart'
 
@@ -14,16 +15,9 @@ interface CartItemProps {
   item: CartItemWithProduct
 }
 
-function formatPrice(priceNgn: number): string {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(priceNgn)
-}
-
 export function CartItem({ item }: CartItemProps) {
   const { cart, updateItemQuantityOptimistic, removeItemOptimistic, revertCart, refreshCart } = useCart()
+  const { formatPrice } = useCurrency()
   const [isUpdating, setIsUpdating] = useState(false)
 
   const handleUpdateQuantity = async (newQuantity: number) => {
@@ -83,7 +77,7 @@ export function CartItem({ item }: CartItemProps) {
 
   const imageUrl = item.product.thumbnail_url || item.product.images?.[0] || '/placeholder.jpg'
   // Use current product price instead of stored price to reflect any price updates
-  const currentUnitPrice = item.product.base_price_ngn
+  const currentUnitPrice = item.product.base_price_gbp
   const totalPrice = currentUnitPrice * item.quantity
   const productUrl = item.product.slug ? `/shop/${item.product.slug}` : '#'
 

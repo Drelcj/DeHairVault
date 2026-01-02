@@ -4,10 +4,10 @@ import { useCurrency, type SupportedCurrency } from '@/contexts/currency-context
 import { Globe } from 'lucide-react'
 
 const CURRENCY_OPTIONS: { code: SupportedCurrency; label: string; flag: string }[] = [
-  { code: 'NGN', label: 'Naira', flag: '🇳🇬' },
-  { code: 'USD', label: 'US Dollar', flag: '🇺🇸' },
   { code: 'GBP', label: 'Pound', flag: '🇬🇧' },
+  { code: 'USD', label: 'US Dollar', flag: '🇺🇸' },
   { code: 'EUR', label: 'Euro', flag: '🇪🇺' },
+  { code: 'NGN', label: 'Naira', flag: '🇳🇬' },
   { code: 'CAD', label: 'CAD', flag: '🇨🇦' },
   { code: 'GHS', label: 'Cedi', flag: '🇬🇭' },
 ]

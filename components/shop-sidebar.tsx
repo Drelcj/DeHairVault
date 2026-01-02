@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { HairTexture, HairCategory } from "@/types/database.types"
+import { useCurrency } from "@/contexts/currency-context"
 import type { FilterState } from "./shop-content-client"
 
 interface ShopSidebarProps {
@@ -99,14 +100,8 @@ export function ShopSidebar({ filters, setFilters, minPrice, maxPrice }: ShopSid
     filters.priceRange[0] > minPrice ||
     filters.priceRange[1] < maxPrice
 
-  // Format price in Naira
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(price)
-  }
+  // Use currency context for formatting
+  const { formatPrice: formatCurrencyPrice } = useCurrency()
 
   return (
     <div className="space-y-8">
@@ -231,11 +226,11 @@ export function ShopSidebar({ filters, setFilters, minPrice, maxPrice }: ShopSid
           />
           <div className="flex items-center justify-between mt-4">
             <div className="px-3 py-1.5 bg-secondary rounded-md">
-              <span className="text-sm font-medium text-foreground">{formatPrice(filters.priceRange[0])}</span>
+              <span className="text-sm font-medium text-foreground">{formatCurrencyPrice(filters.priceRange[0])}</span>
             </div>
             <span className="text-muted-foreground text-sm">to</span>
             <div className="px-3 py-1.5 bg-secondary rounded-md">
-              <span className="text-sm font-medium text-foreground">{formatPrice(filters.priceRange[1])}</span>
+              <span className="text-sm font-medium text-foreground">{formatCurrencyPrice(filters.priceRange[1])}</span>
             </div>
           </div>
         </div>

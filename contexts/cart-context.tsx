@@ -54,8 +54,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       )
       
       const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
-      const subtotalNgn = updatedItems.reduce(
-        (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+      const subtotalGbp = updatedItems.reduce(
+        (sum, item) => sum + (item.product.base_price_gbp * item.quantity),
         0
       )
       
@@ -63,7 +63,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ...prevCart,
         items: updatedItems,
         itemCount,
-        subtotalNgn,
+        subtotalGbp,
       }
     })
   }, [])
@@ -76,8 +76,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const updatedItems = prevCart.items.filter((item) => item.id !== itemId)
       
       const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
-      const subtotalNgn = updatedItems.reduce(
-        (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+      const subtotalGbp = updatedItems.reduce(
+        (sum, item) => sum + (item.product.base_price_gbp * item.quantity),
         0
       )
       
@@ -85,7 +85,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ...prevCart,
         items: updatedItems,
         itemCount,
-        subtotalNgn,
+        subtotalGbp,
       }
     })
   }, [])

@@ -68,9 +68,10 @@ export function convertCurrency(
     throw new Error(`Exchange rate not found for ${from} or ${to}`);
   }
 
-  // Convert to NGN first (base currency), then to target currency
-  const amountInNGN = amount * Number(fromRate.rate_to_ngn);
-  const convertedAmount = amountInNGN / Number(toRate.rate_to_ngn);
+  // Convert via GBP (base currency)
+  // First convert from source currency to GBP, then to target currency
+  const amountInGBP = amount / Number(fromRate.rate_from_gbp);
+  const convertedAmount = amountInGBP * Number(toRate.rate_from_gbp);
 
   return Number(convertedAmount.toFixed(2));
 }

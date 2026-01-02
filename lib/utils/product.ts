@@ -7,10 +7,10 @@ import type { Product, HairGrade } from '@/types/database.types';
  * Calculate product price with length modifier
  * @param product - Product object
  * @param length - Selected length in inches
- * @returns Final price in NGN
+ * @returns Final price in GBP
  */
 export function calculateProductPrice(product: Product, length: number): number {
-  const basePrice = Number(product.base_price_ngn);
+  const basePrice = Number(product.base_price_gbp);
   
   // Check if length is available
   if (!product.available_lengths.includes(length)) {

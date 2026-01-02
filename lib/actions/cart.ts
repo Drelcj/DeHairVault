@@ -15,7 +15,7 @@ export interface CartWithItems {
   id: string
   items: CartItemWithProduct[]
   itemCount: number
-  subtotalNgn: number
+  subtotalGbp: number
 }
 
 // Helper to get or create cart for authenticated user
@@ -84,8 +84,8 @@ export async function addToCart(
       return { success: false, error: 'Product not found' }
     }
 
-    // Calculate price
-    let unitPrice = (product as any).base_price_ngn
+    // Calculate price (in GBP)
+    let unitPrice = (product as any).base_price_gbp
     if (selectedLength && (product as any).length_price_modifiers) {
       const modifier = (product as any).length_price_modifiers[selectedLength.toString()]
       if (modifier) {
@@ -283,8 +283,8 @@ export async function getCart(): Promise<CartWithItems | null> {
 
     // Calculate totals using current product prices (not stored prices at time of adding)
     const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-    const subtotalNgn = cartItems.reduce(
-      (sum, item) => sum + (item.product.base_price_ngn * item.quantity),
+    const subtotalGbp = cartItems.reduce(
+      (sum, item) => sum + (item.product.base_price_gbp * item.quantity),
       0
     )
 
@@ -292,7 +292,7 @@ export async function getCart(): Promise<CartWithItems | null> {
       id: (cart as any).id,
       items: cartItems,
       itemCount,
-      subtotalNgn,
+      subtotalGbp,
     }
   } catch (error) {
     console.error('Error fetching cart:', error)
