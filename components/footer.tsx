@@ -1,6 +1,7 @@
 import Link from "next/link"
-import { Instagram, Facebook, Twitter, Youtube } from "lucide-react"
+import { Instagram, Facebook, Youtube } from "lucide-react"
 import { CurrencySelector } from "@/components/currency-selector"
+import { PiTiktokLogoLight } from "react-icons/pi";
 
 const footerLinks = {
   shop: [
@@ -23,10 +24,10 @@ const footerLinks = {
 }
 
 const socialLinks = [
-  { name: "Instagram", icon: Instagram, href: "#" },
-  { name: "Facebook", icon: Facebook, href: "#" },
-  { name: "Twitter", icon: Twitter, href: "#" },
-  { name: "YouTube", icon: Youtube, href: "#" },
+  { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/dehair_vault/" },
+  { name: "Facebook", icon: Facebook, href: "https://web.facebook.com/profile.php?id=61577310602197" },
+  { name: "TikTok", icon: PiTiktokLogoLight, href: "http://www.tiktok.com/@dehair_vault" },
+  { name: "YouTube", icon: Youtube, href: "https://www.youtube.com/channel/UC9mwnWWJNLuS9H1cMr55eCA" },
 ]
 
 export function Footer() {
@@ -46,7 +47,7 @@ export function Footer() {
             </p>
             <div className="flex gap-4">
               {socialLinks.map((social) => (
-                <Link
+                <Link target="_blank" rel="noopener noreferrer"
                   key={social.name}
                   href={social.href}
                   className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"

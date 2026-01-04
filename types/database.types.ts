@@ -9,6 +9,7 @@ export enum HairGrade {
   GRADE_B = 'GRADE_B', // Single Donor
   GRADE_C = 'GRADE_C', // VIP Virgin
   GRADE_D = 'GRADE_D', // Regular Virgin/Remy
+  GRADE_E = 'GRADE_E', // Raw Hair
 }
 
 export enum HairTexture {

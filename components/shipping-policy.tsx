@@ -27,8 +27,8 @@ export function ShippingPolicy() {
           </div>
           <p className="text-muted-foreground mb-4">
             We exclusively use <strong className="text-foreground">DHL</strong> for secure international and domestic delivery, 
-            ensuring your order is handled with care and arrives on time. For local deliveries within Nigeria, we use trusted 
-            local logistics partners to provide fast and reliable service.
+            ensuring your order is handled with care and arrives on time. {/* For local deliveries within Nigeria, we use trusted 
+            local logistics partners to provide fast and reliable service. */}
           </p>
           <p className="text-muted-foreground">
             All shipments include tracking information so you can monitor your order every step of the way.
@@ -72,13 +72,13 @@ export function ShippingPolicy() {
           </div>
           <div className="space-y-4 text-muted-foreground">
             <p className="leading-relaxed">
-              We provide <strong className="text-foreground">nationwide delivery</strong> across Nigeria and ship internationally 
+              We provide <strong className="text-foreground">nationwide delivery</strong> across the UK and ship internationally 
               to customers worldwide.
             </p>
             <ul className="list-none p-0 m-0 space-y-3 text-sm">
               <li className="flex items-start gap-3">
                 <span className="h-2 w-2 rounded-full bg-accent mt-2 flex-shrink-0" />
-                <span><strong className="text-foreground">Local Delivery (Nigeria):</strong> Delivered via trusted local logistics partners for fast service</span>
+                <span><strong className="text-foreground">Local Delivery (United Kingdom):</strong> Delivered via trusted local logistics partners for fast service</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="h-2 w-2 rounded-full bg-accent mt-2 flex-shrink-0" />
@@ -101,11 +101,11 @@ export function ShippingPolicy() {
             <div className="bg-secondary/50 rounded-xl p-4 mt-4">
               <ul className="list-none p-0 m-0 space-y-3 text-sm">
                 <li className="flex justify-between">
-                  <span>Within Nigeria (Local)</span>
+                  <span>Within United Kingdom (Local)</span>
                   <span className="text-foreground font-medium">3-5 business days</span>
                 </li>
                 <li className="flex justify-between">
-                  <span>West Africa</span>
+                  <span>Other European Countries</span>
                   <span className="text-foreground font-medium">5-7 business days</span>
                 </li>
                 <li className="flex justify-between">
@@ -113,7 +113,7 @@ export function ShippingPolicy() {
                   <span className="text-foreground font-medium">7-14 business days</span>
                 </li>
                 <li className="flex justify-between">
-                  <span>United Kingdom / Europe</span>
+                  <span>West Africa</span>
                   <span className="text-foreground font-medium">7-14 business days</span>
                 </li>
                 <li className="flex justify-between">

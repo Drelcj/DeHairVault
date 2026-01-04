@@ -5,6 +5,7 @@ export const hairGradeOptions = [
   { value: HairGrade.GRADE_B, label: 'Single Donor' },
   { value: HairGrade.GRADE_C, label: 'VIP Virgin' },
   { value: HairGrade.GRADE_D, label: 'Virgin Remy' },
+  { value: HairGrade.GRADE_E, label: 'Raw Hair' },
 ]
 
 export const hairTextureOptions = [

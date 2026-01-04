@@ -41,8 +41,8 @@ export function ContactInfo() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground mb-1">Call Us</p>
-              <a href="tel:+1234567890" className="text-foreground font-medium hover:text-accent transition-colors">
-                +1 (234) 567-890
+              <a href="tel:+447943855973" className="text-foreground font-medium hover:text-accent transition-colors">
+                +44 (0) 7943-855973
               </a>
             </div>
           </div>
@@ -64,8 +64,8 @@ export function ContactInfo() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground mb-1">Location</p>
-              <p className="text-foreground font-medium">Los Angeles, CA</p>
-              <p className="text-muted-foreground text-sm">United States</p>
+              <p className="text-foreground font-medium">Calvary Road, Colchester</p>
+              <p className="text-muted-foreground text-sm">United Kingdom</p>
             </div>
           </div>
         </div>
