@@ -251,11 +251,14 @@ export async function createOrder(
 }
 
 // Get order by ID
-export async function getOrder(orderId: string) {
+// Get order by ID (internal use - requires user verification at call site)
+// SECURITY: This function should only be called after verifying user ownership
+// For user-facing order retrieval, use getUserOrderById instead
+export async function getOrder(orderId: string, userId?: string) {
   try {
     const supabase = await createClient()
 
-    const { data: order, error } = await supabase
+    let query = supabase
       .from('orders')
       .select(
         `
@@ -264,7 +267,13 @@ export async function getOrder(orderId: string) {
       `
       )
       .eq('id', orderId)
-      .single()
+
+    // If userId is provided, enforce ownership check
+    if (userId) {
+      query = query.eq('user_id', userId)
+    }
+
+    const { data: order, error } = await query.single()
 
     if (error) {
       console.error('Error fetching order:', error)
