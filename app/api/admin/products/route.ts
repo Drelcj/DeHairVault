@@ -15,7 +15,9 @@ export async function GET(req: Request) {
   if (!roleRow || (roleRow.role !== 'ADMIN' && roleRow.role !== 'SUPER_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const url = new URL(req.url)
-  const q = url.searchParams.get('q') || ''
+  const rawQ = url.searchParams.get('q') || ''
+  // Sanitize search input: escape special PostgREST/SQL characters
+  const q = rawQ.replace(/[%_\\]/g, '\\$&').slice(0, 100)
   const sort = url.searchParams.get('sort') || 'created_at:desc'
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
   const pageSize = Math.min(100, parseInt(url.searchParams.get('pageSize') || '20'))

@@ -2,9 +2,24 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { checkRateLimit, getClientIP } from '@/lib/utils/rate-limit'
 
 export async function loginAction(email: string, password: string, redirectTo?: string) {
+  // Rate limiting: 5 attempts per minute per IP
+  const headersList = await headers()
+  const clientIP = getClientIP(headersList)
+  const rateLimitResult = await checkRateLimit(`login:${clientIP}`, {
+    maxRequests: 5,
+    windowMs: 60000, // 1 minute
+  })
+
+  if (!rateLimitResult.success) {
+    const waitSeconds = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+    return { error: `Too many login attempts. Please try again in ${waitSeconds} seconds.` }
+  }
+
   // Basic input validation
   if (!email || typeof email !== 'string' || !email.includes('@')) {
     return { error: 'Please provide a valid email address.' }

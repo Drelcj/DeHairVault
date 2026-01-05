@@ -8,7 +8,9 @@ export async function GET(request: Request) {
   const page = Number(url.searchParams.get('page') || '1')
   const pageSize = Number(url.searchParams.get('pageSize') || '20')
   const status = url.searchParams.get('status')
-  const q = url.searchParams.get('q')
+  const rawQ = url.searchParams.get('q')
+  // Sanitize search input: escape special PostgREST/SQL characters
+  const q = rawQ ? rawQ.replace(/[%_\\]/g, '\\$&').slice(0, 100) : null
   const dateFrom = url.searchParams.get('dateFrom')
   const dateTo = url.searchParams.get('dateTo')
   const sort = url.searchParams.get('sort') || 'created_at:desc'
