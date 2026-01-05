@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOrder } from '@/lib/actions/checkout'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +14,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch order details
-    const order = await getOrder(orderId)
+    // SECURITY: Verify user owns this order
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Fetch order details with ownership verification
+    const order = await getOrder(orderId, user.id)
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })

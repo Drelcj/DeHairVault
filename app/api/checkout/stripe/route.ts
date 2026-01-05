@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getOrder, getExchangeRates } from '@/lib/actions/checkout'
+import { createClient } from '@/lib/supabase/server'
 
 // Initialize Stripe with the secret key
 // Note: Let Stripe SDK use its default API version for compatibility
@@ -27,8 +28,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch order details
-    const order = await getOrder(orderId)
+    // SECURITY: Verify user owns this order
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Fetch order details with ownership verification
+    const order = await getOrder(orderId, user.id)
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })

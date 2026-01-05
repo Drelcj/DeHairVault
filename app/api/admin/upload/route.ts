@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+// SECURITY: Whitelist allowed folder names to prevent path traversal
+const ALLOWED_FOLDERS = ['products', 'categories', 'banners', 'avatars']
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +29,10 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData()
     const file = formData.get('file') as File | null
-    const folder = (formData.get('folder') as string) || 'products'
+    const rawFolder = (formData.get('folder') as string) || 'products'
+    
+    // SECURITY: Validate folder against whitelist to prevent path traversal
+    const folder = ALLOWED_FOLDERS.includes(rawFolder) ? rawFolder : 'products'
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
