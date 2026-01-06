@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { checkRateLimit, getClientIP } from '@/lib/utils/rate-limit'
+import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { getClientIP } from '@/lib/utils/headers'
 
 export async function loginAction(email: string, password: string, redirectTo?: string) {
   // Rate limiting: 5 attempts per minute per IP

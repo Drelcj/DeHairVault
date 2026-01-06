@@ -15,15 +15,9 @@ interface RateLimitEntry {
 // In-memory store (use Redis in production for multi-instance deployments)
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
-// Clean up expired entries periodically
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (entry.resetTime < now) {
-      rateLimitStore.delete(key)
-    }
-  }
-}, 60000) // Clean every minute
+// Note: setInterval doesn't work well in serverless environments
+// The store will naturally be cleared when the function instance is recycled
+// For production, use Redis/Upstash with TTL
 
 export interface RateLimitOptions {
   /** Maximum number of requests allowed in the window */
@@ -51,9 +45,15 @@ export async function checkRateLimit(
   const now = Date.now()
   const key = `ratelimit:${identifier}`
   
+  // Clean up expired entries for this key
+  const existingEntry = rateLimitStore.get(key)
+  if (existingEntry && existingEntry.resetTime < now) {
+    rateLimitStore.delete(key)
+  }
+  
   let entry = rateLimitStore.get(key)
   
-  if (!entry || entry.resetTime < now) {
+  if (!entry) {
     // Create new entry
     entry = {
       count: 1,
@@ -83,36 +83,4 @@ export async function checkRateLimit(
     remaining: options.maxRequests - entry.count,
     resetTime: entry.resetTime,
   }
-}
-
-/**
- * Get client IP from request headers
- * Works with Vercel, Cloudflare, and standard proxies
- */
-export function getClientIP(headers: Headers): string {
-  // Check various headers in order of preference
-  const forwardedFor = headers.get('x-forwarded-for')
-  if (forwardedFor) {
-    // Take the first IP (client IP) from the chain
-    return forwardedFor.split(',')[0].trim()
-  }
-  
-  const realIP = headers.get('x-real-ip')
-  if (realIP) {
-    return realIP.trim()
-  }
-  
-  // Vercel-specific
-  const vercelIP = headers.get('x-vercel-forwarded-for')
-  if (vercelIP) {
-    return vercelIP.split(',')[0].trim()
-  }
-  
-  // Cloudflare
-  const cfIP = headers.get('cf-connecting-ip')
-  if (cfIP) {
-    return cfIP.trim()
-  }
-  
-  return 'unknown'
 }
