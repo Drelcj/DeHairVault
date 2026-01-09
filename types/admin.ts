@@ -18,6 +18,7 @@ export interface ProductFormValues {
   slug: string
   description: string | null
   short_description: string | null
+  features: string[]  // List of product features/highlights
   grade: HairGrade | null  // null = N/A
   origin: HairOrigin
   texture: string  // Changed to string to support custom textures

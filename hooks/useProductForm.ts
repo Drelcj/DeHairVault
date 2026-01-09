@@ -10,6 +10,7 @@ const defaultValues: ProductFormValues = {
   slug: '',
   description: '',
   short_description: '',
+  features: [],  // Product features/highlights
   grade: null,  // N/A by default
   origin: HairOrigin.VIETNAM,
   texture: 'STRAIGHT',  // Default texture as string

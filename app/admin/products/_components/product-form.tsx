@@ -142,9 +142,12 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
               id="name"
               value={form.values.name}
               onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="e.g. Brazilian Body Wave Bundle"
+              // maxLength={255}
               required
               className="bg-background"
             />
+            <p className="text-xs text-muted-foreground">Max 255 characters</p>
           </div>
           <div className="space-y-3">
             <Label htmlFor="slug">Slug (URL)</Label>
@@ -175,6 +178,7 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
               rows={4}
               value={form.values.description ?? ''}
               onChange={(e) => form.updateField('description', e.target.value)}
+              placeholder="Detailed product description for customers..."
               className="bg-background"
             />
           </div>
@@ -185,8 +189,24 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
               rows={2}
               value={form.values.short_description ?? ''}
               onChange={(e) => form.updateField('short_description', e.target.value)}
+              placeholder="Brief summary for product cards"
               className="bg-background"
             />
+          </div>
+          <div className="space-y-3 md:col-span-2">
+            <Label htmlFor="features">Features (one per line)</Label>
+            <Textarea
+              id="features"
+              rows={4}
+              value={form.values.features?.join('\n') ?? ''}
+              onChange={(e) => {
+                const lines = e.target.value.split('\n').filter(line => line.trim())
+                form.updateField('features', lines)
+              }}
+              placeholder="100% Virgin Human Hair&#10;Natural color, can be dyed&#10;Minimal shedding and tangling&#10;Lasts 12+ months with proper care"
+              className="bg-background"
+            />
+            <p className="text-xs text-muted-foreground">Enter each feature on a new line. These will be displayed as bullet points.</p>
           </div>
         </div>
       </section>
