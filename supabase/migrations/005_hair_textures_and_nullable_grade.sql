@@ -38,9 +38,26 @@ ON CONFLICT (value) DO NOTHING;
 -- First, drop the NOT NULL constraint if it exists
 ALTER TABLE products ALTER COLUMN grade DROP NOT NULL;
 
+-- Drop the view that depends on texture column
+DROP VIEW IF EXISTS v_products_with_stock;
+
 -- Change texture column to TEXT to support custom textures
 -- (keeping enum values as valid options but allowing new ones)
 ALTER TABLE products ALTER COLUMN texture TYPE TEXT;
+
+-- Recreate the view (must DROP first since column names changed from _ngn to _gbp)
+DROP VIEW IF EXISTS v_products_with_stock;
+
+CREATE VIEW v_products_with_stock AS
+SELECT 
+  p.*,
+  COALESCE(SUM(pv.stock_quantity), p.stock_quantity) as total_stock,
+  COUNT(pv.id) as variant_count,
+  COALESCE(MIN(COALESCE(pv.price_override_ngn, p.base_price_gbp)), p.base_price_gbp) as lowest_price_gbp,
+  COALESCE(MAX(COALESCE(pv.price_override_ngn, p.base_price_gbp)), p.base_price_gbp) as highest_price_gbp
+FROM products p
+LEFT JOIN product_variants pv ON p.id = pv.product_id
+GROUP BY p.id;
 
 -- ============================================================================
 -- 3. RLS POLICIES FOR HAIR_TEXTURES
