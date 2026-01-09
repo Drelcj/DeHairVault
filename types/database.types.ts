@@ -98,6 +98,7 @@ export interface Product {
   slug: string;
   description: string | null;
   short_description: string | null;
+  features: string[] | null;
   grade: HairGrade;
   origin: HairOrigin;
   texture: HairTexture;

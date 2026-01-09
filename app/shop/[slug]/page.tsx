@@ -26,7 +26,12 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   const title = `${product.name} | Dehair Vault`
   const description = product.short_description || product.description || `Shop ${product.name} - Premium quality hair extensions from Dehair Vault`
-  const imageUrl = product.thumbnail_url || product.images?.[0] || '/og-default.jpg'
+  
+  // Get the product image - use absolute URL for social sharing
+  const productImage = product.thumbnail_url || product.images?.[0]
+  const imageUrl = productImage 
+    ? (productImage.startsWith('http') ? productImage : `https://dehairvault.com${productImage}`)
+    : 'https://dehairvault.com/og-default.jpg'
 
   return {
     title,

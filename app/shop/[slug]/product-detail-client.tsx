@@ -294,13 +294,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </Button>
           </div>
 
-          {/* Features */}
+          {/* Trust Badges */}
           <div className="grid grid-cols-3 gap-4 pt-6 border-t border-border">
             <div className="flex flex-col items-center text-center gap-2">
               <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
                 <Truck className="h-5 w-5 text-accent" />
               </div>
-              <span className="text-xs text-muted-foreground">Free Shipping</span>
+              <span className="text-xs text-muted-foreground">Subsidized Shipping</span>
             </div>
             <div className="flex flex-col items-center text-center gap-2">
               <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
@@ -316,11 +316,30 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </div>
           </div>
 
+          {/* Product Features */}
+          {product.features && product.features.length > 0 && (
+            <div className="pt-6 border-t border-border">
+              <h3 className="text-lg font-medium text-foreground mb-4">Key Features</h3>
+              <ul className="space-y-3">
+                {product.features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent/10 flex items-center justify-center mt-0.5">
+                      <svg className="w-3 h-3 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                    <span className="text-muted-foreground leading-relaxed">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Full Description */}
           {product.description && (
             <div className="pt-6 border-t border-border">
-              <h3 className="text-lg font-medium text-foreground mb-3">Product Details</h3>
-              <div className="prose prose-sm text-muted-foreground">
+              <h3 className="text-lg font-medium text-foreground mb-4">Product Details</h3>
+              <div className="text-muted-foreground leading-relaxed whitespace-pre-line">
                 {product.description}
               </div>
             </div>
