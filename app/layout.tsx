@@ -20,12 +20,12 @@ export const metadata: Metadata = {
   description:
     "Where elegance, confidence, and premium hair meet. Discover our exclusive collection of luxury hair extensions.",
   generator: 'v0.app',
-  metadataBase: new URL('https://dehairvault.com'),
+  metadataBase: new URL('https://dehairvault.com/'),
   openGraph: {
     title: 'Dehair Vault | Luxury Hair Extensions',
     description: 'Where elegance, confidence, and premium hair meet. Discover our exclusive collection of luxury hair extensions.',
     type: 'website',
-    url: 'https://dehairvault.com',
+    url: 'https://dehairvault.com/',
     siteName: 'Dehair Vault',
     images: [
       {

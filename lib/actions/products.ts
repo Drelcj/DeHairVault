@@ -157,15 +157,21 @@ export async function getRelatedProducts(
     // If we don't have enough, try same texture
     if (relatedProducts.length < limit) {
       const existingIds = relatedProducts.map(p => p.id)
-      const { data: sameTextureProducts } = await supabase
+      let textureQuery = supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
         .eq('texture', texture)
         .neq('id', currentProductId)
-        .not('id', 'in', `(${existingIds.join(',')})`)
         .order('is_featured', { ascending: false })
         .limit(limit - relatedProducts.length)
+
+      // Only add the NOT IN filter if we have existing IDs
+      if (existingIds.length > 0) {
+        textureQuery = textureQuery.not('id', 'in', `(${existingIds.join(',')})`)
+      }
+
+      const { data: sameTextureProducts } = await textureQuery
 
       if (sameTextureProducts) {
         relatedProducts = [...relatedProducts, ...sameTextureProducts]
@@ -175,15 +181,21 @@ export async function getRelatedProducts(
     // If still not enough, get any other products
     if (relatedProducts.length < limit) {
       const existingIds = relatedProducts.map(p => p.id)
-      const { data: otherProducts } = await supabase
+      let otherQuery = supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
         .neq('id', currentProductId)
-        .not('id', 'in', `(${existingIds.join(',')})`)
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(limit - relatedProducts.length)
+
+      // Only add the NOT IN filter if we have existing IDs
+      if (existingIds.length > 0) {
+        otherQuery = otherQuery.not('id', 'in', `(${existingIds.join(',')})`)
+      }
+
+      const { data: otherProducts } = await otherQuery
 
       if (otherProducts) {
         relatedProducts = [...relatedProducts, ...otherProducts]

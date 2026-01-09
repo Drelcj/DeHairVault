@@ -44,7 +44,7 @@ function getYouTubeVideoId(url: string): string | null {
   
   // Handle various YouTube URL formats
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/,
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\s?]+)/,
     /^([a-zA-Z0-9_-]{11})$/, // Just the video ID
   ]
   
