@@ -3,8 +3,9 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 import { HeaderShell } from '@/components/header-shell'
 import { Footer } from '@/components/footer'
-import { getProductBySlug } from '@/lib/actions/products'
+import { getProductBySlug, getRelatedProducts } from '@/lib/actions/products'
 import { ProductDetailClient } from './product-detail-client'
+import { RelatedProducts } from './related-products'
 
 interface ProductPageProps {
   params: Promise<{
@@ -62,10 +63,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound()
   }
 
+  // Fetch related products
+  const relatedProducts = await getRelatedProducts(
+    product.id,
+    product.category,
+    product.texture,
+    4
+  )
+
   return (
     <main className="min-h-screen bg-background">
       <HeaderShell />
       <ProductDetailClient product={product} />
+      {relatedProducts.length > 0 && (
+        <RelatedProducts products={relatedProducts} />
+      )}
       <Footer />
     </main>
   )

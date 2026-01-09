@@ -123,3 +123,77 @@ export async function getFeaturedProducts(limit: number = 6): Promise<Product[]>
     return []
   }
 }
+
+/**
+ * Get related products based on same category or texture, excluding current product
+ */
+export async function getRelatedProducts(
+  currentProductId: string,
+  category: string,
+  texture: string,
+  limit: number = 4
+): Promise<Product[]> {
+  try {
+    const supabase = createServiceClient()
+    
+    // First try to get products with same category
+    const { data: sameCategoryProducts, error: categoryError } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .eq('category', category)
+      .neq('id', currentProductId)
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (categoryError) {
+      console.error('[getRelatedProducts] Error:', categoryError.message)
+      return []
+    }
+
+    let relatedProducts = sameCategoryProducts || []
+
+    // If we don't have enough, try same texture
+    if (relatedProducts.length < limit) {
+      const existingIds = relatedProducts.map(p => p.id)
+      const { data: sameTextureProducts } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .eq('texture', texture)
+        .neq('id', currentProductId)
+        .not('id', 'in', `(${existingIds.join(',')})`)
+        .order('is_featured', { ascending: false })
+        .limit(limit - relatedProducts.length)
+
+      if (sameTextureProducts) {
+        relatedProducts = [...relatedProducts, ...sameTextureProducts]
+      }
+    }
+
+    // If still not enough, get any other products
+    if (relatedProducts.length < limit) {
+      const existingIds = relatedProducts.map(p => p.id)
+      const { data: otherProducts } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .neq('id', currentProductId)
+        .not('id', 'in', `(${existingIds.join(',')})`)
+        .order('is_featured', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(limit - relatedProducts.length)
+
+      if (otherProducts) {
+        relatedProducts = [...relatedProducts, ...otherProducts]
+      }
+    }
+
+    console.log(`[getRelatedProducts] Found ${relatedProducts.length} related products`)
+    return relatedProducts
+  } catch (error) {
+    console.error('[getRelatedProducts] Error:', error)
+    return []
+  }
+}
