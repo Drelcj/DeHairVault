@@ -38,6 +38,24 @@ function formatCategory(category: string): string {
     .join(' ')
 }
 
+// Helper function to extract YouTube video ID from various URL formats
+function getYouTubeVideoId(url: string): string | null {
+  if (!url) return null
+  
+  // Handle various YouTube URL formats
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/,
+    /^([a-zA-Z0-9_-]{11})$/, // Just the video ID
+  ]
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match) return match[1]
+  }
+  
+  return null
+}
+
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
   // Debug: Log when component renders
   console.log('[ProductDetailClient] Rendering with product:', product?.name, product?.slug)
@@ -318,7 +336,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               </div>
               <div className="flex justify-between py-2 border-b border-border">
                 <span className="text-muted-foreground">Grade:</span>
-                <span className="font-medium">{product.grade}</span>
+                <span className="font-medium">{product.grade || 'N/A'}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-border">
                 <span className="text-muted-foreground">Texture:</span>
@@ -332,6 +350,22 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               )}
             </div>
           </div>
+
+          {/* Product Video */}
+          {product.video_url && getYouTubeVideoId(product.video_url) && (
+            <div className="pt-6 border-t border-border">
+              <h3 className="text-lg font-medium text-foreground mb-3">Product Video</h3>
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-secondary">
+                <iframe
+                  src={`https://www.youtube.com/embed/${getYouTubeVideoId(product.video_url)}`}
+                  title={`${product.name} - Product Video`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
