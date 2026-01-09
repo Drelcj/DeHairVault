@@ -1,6 +1,7 @@
 import { DrawType, HairCategory, HairGrade, HairOrigin, HairTexture } from '@/types/database.types'
 
 export const hairGradeOptions = [
+  { value: null, label: 'N/A' },
   { value: HairGrade.GRADE_A, label: 'Raw Baby Hair' },
   { value: HairGrade.GRADE_B, label: 'Single Donor' },
   { value: HairGrade.GRADE_C, label: 'VIP Virgin' },

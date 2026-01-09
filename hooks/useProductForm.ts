@@ -10,9 +10,9 @@ const defaultValues: ProductFormValues = {
   slug: '',
   description: '',
   short_description: '',
-  grade: HairGrade.GRADE_B,
+  grade: null,  // N/A by default
   origin: HairOrigin.VIETNAM,
-  texture: HairTexture.STRAIGHT,
+  texture: 'STRAIGHT',  // Default texture as string
   category: HairCategory.BUNDLES,
   draw_type: null,
   available_lengths: [14, 16, 18],

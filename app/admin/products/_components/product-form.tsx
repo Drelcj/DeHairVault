@@ -1,17 +1,19 @@
 "use client"
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { hairCategoryOptions, hairGradeOptions, hairOriginOptions, hairTextureOptions, drawTypeOptions } from '@/lib/constants/enums'
+import { CreatableSelect } from '@/components/ui/creatable-select'
+import { hairCategoryOptions, hairGradeOptions, hairOriginOptions, drawTypeOptions } from '@/lib/constants/enums'
+import { getHairTextures, createHairTexture, type HairTextureOption } from '@/lib/actions/textures'
 import { useProductForm } from '@/hooks/useProductForm'
 import { generateProductSlug } from '@/lib/utils/product'
 import type { ActionResult, ProductFormValues } from '@/types/admin'
-import { DrawType } from '@/types/database.types'
+import { DrawType, HairGrade } from '@/types/database.types'
 import { ImageUpload } from './image-upload'
 
 type Props = {
@@ -25,6 +27,39 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
   const [isPending, startTransition] = useTransition()
   // Track if user has manually edited the slug
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!initialData?.slug)
+  
+  // Texture options from database
+  const [textureOptions, setTextureOptions] = useState<HairTextureOption[]>([])
+  const [texturesLoading, setTexturesLoading] = useState(true)
+
+  // Load textures on mount
+  useEffect(() => {
+    async function loadTextures() {
+      setTexturesLoading(true)
+      try {
+        const textures = await getHairTextures()
+        setTextureOptions(textures)
+      } catch (error) {
+        console.error('Failed to load textures:', error)
+      } finally {
+        setTexturesLoading(false)
+      }
+    }
+    loadTextures()
+  }, [])
+
+  // Handle creating a new texture
+  const handleCreateTexture = async (label: string) => {
+    const result = await createHairTexture(label)
+    if (result.success && result.value) {
+      // Refresh textures and select the new one
+      const textures = await getHairTextures()
+      setTextureOptions(textures)
+      form.updateField('texture', result.value)
+    } else {
+      form.setError(result.error || 'Failed to create texture')
+    }
+  }
 
   const lengthString = useMemo(() => form.values.available_lengths.join(', '), [form.values.available_lengths])
 
@@ -166,15 +201,15 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
           <div className="space-y-3">
             <Label>Grade</Label>
             <Select
-              value={form.values.grade}
-              onValueChange={(value) => form.updateField('grade', value as ProductFormValues['grade'])}
+              value={form.values.grade ?? 'NA'}
+              onValueChange={(value) => form.updateField('grade', value === 'NA' ? null : value as HairGrade)}
             >
               <SelectTrigger className="w-full bg-background">
                 <SelectValue placeholder="Select grade" />
               </SelectTrigger>
               <SelectContent>
                 {hairGradeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  <SelectItem key={option.value ?? 'NA'} value={option.value ?? 'NA'}>{option.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -182,19 +217,16 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
 
           <div className="space-y-3">
             <Label>Texture</Label>
-            <Select
+            <CreatableSelect
+              options={textureOptions}
               value={form.values.texture}
-              onValueChange={(value) => form.updateField('texture', value as ProductFormValues['texture'])}
-            >
-              <SelectTrigger className="w-full bg-background">
-                <SelectValue placeholder="Select texture" />
-              </SelectTrigger>
-              <SelectContent>
-                {hairTextureOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) => form.updateField('texture', value)}
+              onCreateOption={handleCreateTexture}
+              placeholder={texturesLoading ? "Loading..." : "Select texture..."}
+              searchPlaceholder="Search or type to create..."
+              emptyMessage="No texture found."
+              disabled={texturesLoading}
+            />
           </div>
 
           <div className="space-y-3">
