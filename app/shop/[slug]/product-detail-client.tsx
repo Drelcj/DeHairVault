@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ImageCarousel } from '@/components/ui/image-carousel'
 import { cn } from '@/lib/utils'
 import { addToCart } from '@/lib/actions/cart'
 import { useCart } from '@/contexts/cart-context'
@@ -126,27 +127,25 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       <div className="grid lg:grid-cols-2 gap-12">
         {/* Product Images */}
         <div className="space-y-4">
-          {/* Main Image */}
+          {/* Main Image with Auto-Carousel (4-second intervals for focused viewing) */}
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-secondary">
-            <Image
-              src={currentImage || fallbackImage}
+            <ImageCarousel
+              images={images}
               alt={product.name}
-              fill
-              className="object-cover"
-              priority
+              mode="view"
             />
             {product.is_featured && (
-              <div className="absolute top-4 left-4 px-3 py-1 bg-accent text-accent-foreground text-xs font-medium uppercase tracking-wider rounded-full">
+              <div className="absolute top-4 left-4 px-3 py-1 bg-accent text-accent-foreground text-xs font-medium uppercase tracking-wider rounded-full z-10">
                 Featured
               </div>
             )}
             {product.is_new_arrival && !product.is_featured && (
-              <div className="absolute top-4 left-4 px-3 py-1 bg-primary text-primary-foreground text-xs font-medium uppercase tracking-wider rounded-full">
+              <div className="absolute top-4 left-4 px-3 py-1 bg-primary text-primary-foreground text-xs font-medium uppercase tracking-wider rounded-full z-10">
                 New Arrival
               </div>
             )}
             {product.is_bestseller && (
-              <div className="absolute top-4 right-4 px-3 py-1 bg-foreground text-background text-xs font-medium uppercase tracking-wider rounded-full">
+              <div className="absolute top-4 right-4 px-3 py-1 bg-foreground text-background text-xs font-medium uppercase tracking-wider rounded-full z-10">
                 Bestseller
               </div>
             )}

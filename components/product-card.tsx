@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ShoppingBag, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ImageCarousel } from "@/components/ui/image-carousel"
 import { cn } from "@/lib/utils"
 import { addToCart } from "@/lib/actions/cart"
 import { useCart } from "@/contexts/cart-context"
@@ -100,12 +101,26 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="relative bg-card rounded-xl overflow-hidden border border-border hover:border-accent/50 transition-all duration-500 hover:shadow-xl hover:shadow-accent/5">
           {/* Image Container */}
           <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-secondary via-muted to-secondary">
-            <Image
-              src={imageUrl || fallbackImage}
-              alt={product.name}
-              fill
-              className={cn("object-cover transition-transform duration-700", isHovered ? "scale-110" : "scale-100")}
-            />
+            {/* Image Carousel - activates on hover for products with multiple images */}
+            {productImages.length > 1 ? (
+              <ImageCarousel
+                images={productImages}
+                alt={product.name}
+                mode="browse"
+                isActive={isHovered}
+                className={cn(
+                  "transition-transform duration-700",
+                  isHovered ? "scale-110" : "scale-100"
+                )}
+              />
+            ) : (
+              <Image
+                src={imageUrl || fallbackImage}
+                alt={product.name}
+                fill
+                className={cn("object-cover transition-transform duration-700", isHovered ? "scale-110" : "scale-100")}
+              />
+            )}
 
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

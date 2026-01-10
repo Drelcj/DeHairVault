@@ -10,6 +10,7 @@ function normalizeProductPayload(payload: ProductFormValues) {
     slug: payload.slug,
     description: payload.description,
     short_description: payload.short_description,
+    features: payload.features || null,
     grade: payload.grade,
     origin: payload.origin,
     texture: payload.texture,

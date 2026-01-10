@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { HairOrigin } from '@/types/database.types'
+import { ImageCarousel } from '@/components/ui/image-carousel'
 
 interface OriginCard {
   origin: HairOrigin
@@ -56,58 +55,6 @@ const originCards: OriginCard[] = [
 export { originCards }
 export type { OriginCard }
 
-interface ImageCarouselProps {
-  images: string[]
-  alt: string
-}
-
-function ImageCarousel({ images, alt }: ImageCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isTransitioning, setIsTransitioning] = useState(false)
-
-  useEffect(() => {
-    if (images.length <= 1) return
-
-    const interval = setInterval(() => {
-      setIsTransitioning(true)
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % images.length)
-        setIsTransitioning(false)
-      }, 500) // Half of the transition duration
-    }, 2000)
-
-    return () => clearInterval(interval)
-  }, [images.length])
-
-  if (images.length === 0) {
-    return (
-      <div className="absolute inset-0 bg-gradient-to-br from-secondary to-muted" />
-    )
-  }
-
-  return (
-    <>
-      {images.map((image, index) => (
-        <Image
-          key={image}
-          src={image}
-          alt={alt}
-          fill
-          className={cn(
-            'object-cover transition-opacity duration-1000 ease-in-out',
-            index === currentIndex ? 'opacity-100' : 'opacity-0',
-            isTransitioning && index === currentIndex && 'opacity-0',
-            isTransitioning && index === (currentIndex + 1) % images.length && 'opacity-100'
-          )}
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-          }}
-        />
-      ))}
-    </>
-  )
-}
-
 interface OriginNavigationCardsProps {
   originImages?: Record<HairOrigin, string[]>
   currentOrigin?: HairOrigin | null
@@ -148,7 +95,7 @@ export function OriginNavigationCards({
           ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5' 
           : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
       )}>
-        {cardsToShow.map((card) => {
+        {cardsToShow.map((card, index) => {
           const images = originImages[card.origin] || []
           
           return (
@@ -162,9 +109,14 @@ export function OriginNavigationCards({
                 compact ? 'aspect-[4/5]' : 'aspect-[3/4]'
               )}
             >
-              {/* Background Image with Carousel */}
+              {/* Background Image with Carousel - Origin mode for staggered timing */}
               <div className="absolute inset-0 bg-secondary">
-                <ImageCarousel images={images} alt={card.label} />
+                <ImageCarousel 
+                  images={images} 
+                  alt={card.label} 
+                  mode="origin"
+                  staggerIndex={index}
+                />
                 
                 {/* Fallback gradient if no images */}
                 {images.length === 0 && (
