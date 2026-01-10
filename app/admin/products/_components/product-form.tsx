@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { TagInput } from '@/components/ui/tag-input'
 import { CreatableSelect } from '@/components/ui/creatable-select'
 import { hairCategoryOptions, hairGradeOptions, hairOriginOptions, drawTypeOptions } from '@/lib/constants/enums'
 import { getHairTextures, createHairTexture, type HairTextureOption } from '@/lib/actions/textures'
@@ -194,19 +195,15 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
             />
           </div>
           <div className="space-y-3 md:col-span-2">
-            <Label htmlFor="features">Features (one per line)</Label>
-            <Textarea
-              id="features"
-              rows={4}
-              value={form.values.features?.join('\n') ?? ''}
-              onChange={(e) => {
-                const lines = e.target.value.split('\n').filter(line => line.trim())
-                form.updateField('features', lines)
-              }}
-              placeholder="100% Virgin Human Hair&#10;Natural color, can be dyed&#10;Minimal shedding and tangling&#10;Lasts 12+ months with proper care"
-              className="bg-background"
+            <Label htmlFor="features">Key Features</Label>
+            <TagInput
+              value={form.values.features ?? []}
+              onChange={(features) => form.updateField('features', features)}
+              placeholder="Type a feature and press Enter to add..."
             />
-            <p className="text-xs text-muted-foreground">Enter each feature on a new line. These will be displayed as bullet points.</p>
+            <p className="text-xs text-muted-foreground">
+              Press Enter after each feature to add it. These will be displayed as bullet points on the product page.
+            </p>
           </div>
         </div>
       </section>

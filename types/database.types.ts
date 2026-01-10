@@ -369,8 +369,8 @@ export type ProductReviewUpdate = Partial<Omit<ProductReview, 'id' | 'created_at
 export interface ProductWithStock extends Product {
   total_stock: number;
   variant_count: number;
-  lowest_price_ngn: number;
-  highest_price_ngn: number;
+  lowest_price_gbp: number;
+  highest_price_gbp: number;
 }
 
 export interface OrderSummary {

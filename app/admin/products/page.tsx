@@ -1,7 +1,7 @@
 import Link from "next/link"
-import { Package, Plus, Edit, Search } from "lucide-react"
-import { formatPrice } from "@/lib/utils/currency"
+import { Package, Plus, Search } from "lucide-react"
 import { createServiceClient } from "@/lib/supabase/server"
+import { ProductsTableClient } from "./_components/products-table-client"
 
 export const dynamic = 'force-dynamic'
 
@@ -82,100 +82,7 @@ export default async function AdminProductsPage({
       </form>
 
       {/* Products Table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Product</th>
-                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Category</th>
-                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Price</th>
-                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Stock</th>
-                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {data.products.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                    <p className="mt-4 text-muted-foreground">
-                      {q ? `No products matching "${q}"` : 'No products found'}
-                    </p>
-                    <Link
-                      href="/admin/products/new"
-                      className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent/90"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add your first product
-                    </Link>
-                  </td>
-                </tr>
-              ) : (
-                data.products.map((product) => (
-                  <tr key={product.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        {product.images?.[0] ? (
-                          <img 
-                            src={product.images[0]} 
-                            alt={product.name}
-                            className="h-10 w-10 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-foreground">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.slug}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {product.category}
-                    </td>
-                    <td className="px-6 py-4 font-medium">
-                      {formatPrice(Number(product.base_price_gbp || 0), 'GBP')}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`font-medium ${
-                        product.stock_quantity === 0 
-                          ? 'text-red-600 dark:text-red-400' 
-                          : product.stock_quantity <= 10
-                            ? 'text-yellow-600 dark:text-yellow-400'
-                            : 'text-foreground'
-                      }`}>
-                        {product.stock_quantity}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-                        product.is_active 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                      }`}>
-                        {product.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/admin/products/${product.id}/edit`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                        Edit
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ProductsTableClient products={data.products} />
 
       {/* Pagination */}
       {data.totalPages > 1 && (

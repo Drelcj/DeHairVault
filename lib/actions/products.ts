@@ -209,3 +209,47 @@ export async function getRelatedProducts(
     return []
   }
 }
+
+/**
+ * Delete a product by ID (admin only)
+ */
+export async function deleteProduct(productId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+    
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { success: false, error: 'Unauthorized' }
+    }
+    
+    // Check admin role
+    const serviceClient = createServiceClient()
+    const { data: roleData } = await serviceClient
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    
+    if (!roleData || !['ADMIN', 'SUPER_ADMIN'].includes(roleData.role)) {
+      return { success: false, error: 'Forbidden - Admin access required' }
+    }
+    
+    // Delete the product (cascade will handle variants)
+    const { error: deleteError } = await serviceClient
+      .from('products')
+      .delete()
+      .eq('id', productId)
+    
+    if (deleteError) {
+      console.error('[deleteProduct] Error:', deleteError)
+      return { success: false, error: deleteError.message }
+    }
+    
+    console.log(`[deleteProduct] Successfully deleted product: ${productId}`)
+    return { success: true }
+  } catch (error) {
+    console.error('[deleteProduct] Error:', error)
+    return { success: false, error: 'Failed to delete product' }
+  }
+}

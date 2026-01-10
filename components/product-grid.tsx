@@ -10,7 +10,7 @@ interface ProductGridProps {
 export function ProductGrid({ products }: ProductGridProps) {
   if (products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
         <div className="w-24 h-24 mb-6 rounded-full bg-secondary flex items-center justify-center">
           <svg className="w-10 h-10 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -31,8 +31,14 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+      {products.map((product, index) => (
+        <div
+          key={product.id}
+          className="animate-fade-in-up"
+          style={{ animationDelay: `${index * 50}ms` }}
+        >
+          <ProductCard product={product} />
+        </div>
       ))}
     </div>
   )
