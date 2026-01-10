@@ -35,7 +35,7 @@ function VideoPreview({
   const compatibleUrl = getWebCompatibleVideoUrl(url)
 
   return (
-    <div className="relative group rounded-lg overflow-hidden border border-border bg-secondary aspect-video">
+    <div className="relative group rounded-lg overflow-hidden border border-border bg-secondary aspect-square">
       {/* Loading State */}
       {isLoading && !hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-secondary z-10">
@@ -61,7 +61,7 @@ function VideoPreview({
         loop
         preload="metadata"
         className={cn(
-          "w-full h-full object-cover transition-opacity",
+          "w-full h-full object-contain transition-opacity",
           (isLoading || hasError) ? "opacity-0" : "opacity-100"
         )}
         onLoadedData={() => {

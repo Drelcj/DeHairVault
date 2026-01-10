@@ -43,10 +43,10 @@ function ProductVideo({ url, index }: { url: string; index: number }) {
   const handlePause = () => setIsPlaying(false)
 
   return (
-    <div className="relative aspect-video rounded-lg overflow-hidden bg-secondary group">
+    <div className="relative rounded-lg bg-secondary group">
       {/* Loading State */}
       {isLoading && !hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-secondary z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary z-10 min-h-[200px]">
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 text-accent animate-spin" />
             <span className="text-sm text-muted-foreground">Loading video...</span>
@@ -56,7 +56,7 @@ function ProductVideo({ url, index }: { url: string; index: number }) {
 
       {/* Error State */}
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-secondary z-10">
+        <div className="flex items-center justify-center bg-secondary min-h-[200px] rounded-lg">
           <div className="flex flex-col items-center gap-2 text-center px-4">
             <Play className="h-8 w-8 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Unable to load video</span>
@@ -81,8 +81,8 @@ function ProductVideo({ url, index }: { url: string; index: number }) {
         muted
         preload="metadata"
         className={cn(
-          "w-full h-full object-cover transition-opacity duration-300",
-          (isLoading || hasError) ? "opacity-0" : "opacity-100"
+          "w-full h-auto rounded-lg transition-opacity duration-300",
+          (isLoading || hasError) ? "opacity-0 absolute" : "opacity-100"
         )}
         onLoadedData={handleLoadedData}
         onError={handleError}
@@ -104,7 +104,7 @@ function ProductVideo({ url, index }: { url: string; index: number }) {
 
       {/* Play Overlay (visible when not loading, no error, and not playing) */}
       {!isLoading && !hasError && !isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
           <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
             <Play className="h-8 w-8 text-foreground ml-1" fill="currentColor" />
           </div>
