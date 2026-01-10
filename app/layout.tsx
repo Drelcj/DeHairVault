@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: 'Dehair Vault',
     images: [
       {
-        url: '/og-default.jpg',
+        url: 'https://dehairvault.com/og-default.jpg',
         width: 1200,
         height: 630,
         alt: 'Dehair Vault - Luxury Hair Extensions',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Dehair Vault | Luxury Hair Extensions',
     description: 'Where elegance, confidence, and premium hair meet. Discover our exclusive collection of luxury hair extensions.',
-    images: ['/og-default.jpg'],
+    images: ['https://dehairvault.com/og-default.jpg'],
   },
 }
 
