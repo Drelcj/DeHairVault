@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { ShopSidebar } from "./shop-sidebar"
 import { ProductGrid } from "./product-grid"
 import { ShopToolbar } from "./shop-toolbar"
-import { OriginFilterCards } from "./origin-filter-cards"
+import { OriginNavigationCards } from "./origin-navigation-cards"
 import { SlidersHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -23,9 +23,10 @@ interface ShopContentClientProps {
   initialProducts: Product[]
   minPrice: number
   maxPrice: number
+  originImages?: Record<HairOrigin, string[]>
 }
 
-export function ShopContentClient({ initialProducts, minPrice, maxPrice }: ShopContentClientProps) {
+export function ShopContentClient({ initialProducts, minPrice, maxPrice, originImages = {} as Record<HairOrigin, string[]> }: ShopContentClientProps) {
   const searchParams = useSearchParams()
   
   // Get category and origin from URL query params
@@ -111,11 +112,8 @@ export function ShopContentClient({ initialProducts, minPrice, maxPrice }: ShopC
   return (
     <section className="pb-24">
       <div className="container mx-auto px-6 lg:px-12">
-        {/* Origin Filter Cards */}
-        <OriginFilterCards
-          selectedOrigin={filters.origin}
-          onOriginChange={(origin) => setFilters(prev => ({ ...prev, origin }))}
-        />
+        {/* Origin Navigation Cards */}
+        <OriginNavigationCards originImages={originImages} />
 
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">

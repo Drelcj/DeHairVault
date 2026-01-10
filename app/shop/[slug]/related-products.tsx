@@ -3,25 +3,48 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useCurrency } from '@/contexts/currency-context'
-import type { Product } from '@/types/database.types'
+import type { Product, HairOrigin } from '@/types/database.types'
+
+// Map origins to display names
+const originDisplayNames: Record<HairOrigin, string> = {
+  CHINA: 'Chinese',
+  VIETNAM: 'Vietnamese',
+  CAMBODIA: 'Cambodian',
+  BURMA: 'Burmese',
+  PHILIPPINES: 'Filipino',
+  INDIA: 'Indian',
+}
 
 interface RelatedProductsProps {
   products: Product[]
+  currentOrigin?: HairOrigin
 }
 
-export function RelatedProducts({ products }: RelatedProductsProps) {
+export function RelatedProducts({ products, currentOrigin }: RelatedProductsProps) {
   const { formatPrice } = useCurrency()
 
   if (products.length === 0) return null
+
+  // Check if most related products are from the same origin
+  const sameOriginProducts = currentOrigin 
+    ? products.filter(p => p.origin === currentOrigin)
+    : []
+  const showOriginInTitle = sameOriginProducts.length >= products.length / 2
 
   return (
     <section className="container mx-auto px-6 lg:px-12 py-16 border-t border-border">
       <div className="text-center mb-10">
         <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-medium text-foreground mb-2">
-          You May Also Like
+          {showOriginInTitle && currentOrigin 
+            ? `More ${originDisplayNames[currentOrigin]} Hair`
+            : 'You May Also Like'
+          }
         </h2>
         <p className="text-muted-foreground">
-          Explore more products from our collection
+          {showOriginInTitle && currentOrigin
+            ? `Explore more products from our ${originDisplayNames[currentOrigin]} collection`
+            : 'Explore more products from our collection'
+          }
         </p>
       </div>
 

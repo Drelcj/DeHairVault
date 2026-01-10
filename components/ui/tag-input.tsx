@@ -63,13 +63,13 @@ export function TagInput({
         <span
           key={index}
           className={cn(
-            'inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm',
-            'bg-accent/10 text-accent-foreground border border-accent/20',
-            'animate-scale-in'
+            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium',
+            'bg-accent text-accent-foreground',
+            'shadow-sm animate-scale-in'
           )}
         >
-          <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-accent" />
-          {tag}
+          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent-foreground/30" />
+          <span className="text-accent-foreground">{tag}</span>
           {!disabled && (
             <button
               type="button"
@@ -77,9 +77,9 @@ export function TagInput({
                 e.stopPropagation()
                 removeTag(index)
               }}
-              className="ml-1 p-0.5 rounded-full hover:bg-accent/20 transition-colors"
+              className="ml-0.5 p-0.5 rounded-full hover:bg-accent-foreground/20 transition-colors"
             >
-              <X className="h-3 w-3" />
+              <X className="h-3 w-3 text-accent-foreground" />
             </button>
           )}
         </span>

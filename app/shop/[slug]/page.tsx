@@ -4,8 +4,10 @@ import type { Metadata } from 'next'
 import { HeaderShell } from '@/components/header-shell'
 import { Footer } from '@/components/footer'
 import { getProductBySlug, getRelatedProducts } from '@/lib/actions/products'
+import { getOriginProductImages } from '@/lib/actions/origin'
 import { ProductDetailClient } from './product-detail-client'
 import { RelatedProducts } from './related-products'
+import { OriginNavigationCards } from '@/components/origin-navigation-cards'
 
 interface ProductPageProps {
   params: Promise<{
@@ -68,21 +70,38 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound()
   }
 
-  // Fetch related products
-  const relatedProducts = await getRelatedProducts(
-    product.id,
-    product.category,
-    product.texture,
-    4
-  )
+  // Fetch related products and origin images in parallel
+  const [relatedProducts, originImages] = await Promise.all([
+    getRelatedProducts(
+      product.id,
+      product.category,
+      product.texture,
+      4
+    ),
+    getOriginProductImages(),
+  ])
 
   return (
     <main className="min-h-screen bg-background">
       <HeaderShell />
       <ProductDetailClient product={product} />
+      
+      {/* Related Products Section */}
       {relatedProducts.length > 0 && (
-        <RelatedProducts products={relatedProducts} />
+        <RelatedProducts products={relatedProducts} currentOrigin={product.origin} />
       )}
+      
+      {/* Origin Navigation Cards */}
+      <section className="py-16 border-t border-border">
+        <div className="container mx-auto px-6 lg:px-12">
+          <OriginNavigationCards 
+            originImages={originImages}
+            currentOrigin={product.origin}
+            compact
+          />
+        </div>
+      </section>
+      
       <Footer />
     </main>
   )
