@@ -1,18 +1,118 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play } from 'lucide-react'
+import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { cn } from '@/lib/utils'
+import { getWebCompatibleVideoUrl } from '@/lib/utils/cloudinary-video'
 import { addToCart } from '@/lib/actions/cart'
 import { useCart } from '@/contexts/cart-context'
 import { useCurrency } from '@/contexts/currency-context'
 import { toast } from 'sonner'
 import type { Product } from '@/types/database.types'
+
+/**
+ * ProductVideo Component - Handles video playback with loading states
+ * Transforms Cloudinary URLs for cross-browser compatibility
+ */
+function ProductVideo({ url, index }: { url: string; index: number }) {
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  // Transform URL for web compatibility (handles .mov → mp4 conversion)
+  const compatibleUrl = getWebCompatibleVideoUrl(url)
+
+  const handleLoadedData = () => {
+    setIsLoading(false)
+    setHasError(false)
+  }
+
+  const handleError = () => {
+    setIsLoading(false)
+    setHasError(true)
+    console.error(`[ProductVideo] Failed to load video ${index + 1}:`, url)
+  }
+
+  const handlePlay = () => setIsPlaying(true)
+  const handlePause = () => setIsPlaying(false)
+
+  return (
+    <div className="relative aspect-video rounded-lg overflow-hidden bg-secondary group">
+      {/* Loading State */}
+      {isLoading && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary z-10">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 text-accent animate-spin" />
+            <span className="text-sm text-muted-foreground">Loading video...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary z-10">
+          <div className="flex flex-col items-center gap-2 text-center px-4">
+            <Play className="h-8 w-8 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Unable to load video</span>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent hover:underline"
+            >
+              Open in new tab
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Video Player */}
+      <video
+        ref={videoRef}
+        src={compatibleUrl}
+        controls
+        playsInline
+        muted
+        preload="metadata"
+        className={cn(
+          "w-full h-full object-cover transition-opacity duration-300",
+          (isLoading || hasError) ? "opacity-0" : "opacity-100"
+        )}
+        onLoadedData={handleLoadedData}
+        onError={handleError}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onMouseEnter={(e) => {
+          const video = e.currentTarget
+          video.muted = true
+          video.play().catch(() => {})
+        }}
+        onMouseLeave={(e) => {
+          const video = e.currentTarget
+          if (!video.paused) {
+            video.pause()
+            video.currentTime = 0
+          }
+        }}
+      />
+
+      {/* Play Overlay (visible when not loading, no error, and not playing) */}
+      {!isLoading && !hasError && !isPlaying && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
+          <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
+            <Play className="h-8 w-8 text-foreground ml-1" fill="currentColor" />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface ProductDetailClientProps {
   product: Product
@@ -397,32 +497,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 product.video_urls.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
               )}>
                 {product.video_urls.map((videoUrl, index) => (
-                  <div key={index} className="relative aspect-video rounded-lg overflow-hidden bg-secondary group">
-                    <video
-                      src={videoUrl}
-                      controls
-                      playsInline
-                      muted
-                      preload="metadata"
-                      className="w-full h-full object-cover"
-                      onMouseEnter={(e) => {
-                        const video = e.currentTarget
-                        video.muted = true
-                        video.play().catch(() => {})
-                      }}
-                      onMouseLeave={(e) => {
-                        const video = e.currentTarget
-                        video.pause()
-                        video.currentTime = 0
-                      }}
-                    />
-                    {/* Play Overlay (visible until video starts playing) */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
-                      <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                        <Play className="h-8 w-8 text-foreground ml-1" fill="currentColor" />
-                      </div>
-                    </div>
-                  </div>
+                  <ProductVideo key={index} url={videoUrl} index={index} />
                 ))}
               </div>
             </div>
