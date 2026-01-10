@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play, Loader2 } from 'lucide-react'
+import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play, Loader2, PictureInPicture2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { cn } from '@/lib/utils'
@@ -16,17 +16,90 @@ import { toast } from 'sonner'
 import type { Product } from '@/types/database.types'
 
 /**
- * ProductVideo Component - Handles video playback with loading states
- * Transforms Cloudinary URLs for cross-browser compatibility
+ * ProductVideo Component - Handles video playback with:
+ * - Intersection Observer for viewport-based autoplay (desktop)
+ * - Manual Picture-in-Picture (PiP) toggle button
+ * - Intrinsic dimension preservation (w-full h-auto)
+ * - Cross-browser Cloudinary URL transformation
  */
 function ProductVideo({ url, index }: { url: string; index: number }) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isPiPActive, setIsPiPActive] = useState(false)
+  const [isPiPSupported, setIsPiPSupported] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Transform URL for web compatibility (handles .mov → mp4 conversion)
   const compatibleUrl = getWebCompatibleVideoUrl(url)
+
+  // Check PiP support on mount
+  useEffect(() => {
+    setIsPiPSupported(
+      typeof document !== 'undefined' && 
+      'pictureInPictureEnabled' in document && 
+      document.pictureInPictureEnabled
+    )
+  }, [])
+
+  // Intersection Observer for viewport-based autoplay (desktop only)
+  useEffect(() => {
+    const video = videoRef.current
+    const container = containerRef.current
+    if (!video || !container || isLoading || hasError) return
+
+    // Only enable intersection-based autoplay on larger screens (lg+)
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches
+    if (!isDesktop) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Video is in viewport - autoplay muted
+            video.muted = true
+            video.play().catch(() => {
+              // Autoplay blocked - user will need to interact
+              console.log('[ProductVideo] Autoplay blocked by browser')
+            })
+          } else {
+            // Video is out of viewport - pause to save resources
+            if (!video.paused && !isPiPActive) {
+              video.pause()
+            }
+          }
+        })
+      },
+      {
+        threshold: 0.5, // Trigger when 50% of video is visible
+        rootMargin: '0px'
+      }
+    )
+
+    observer.observe(container)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [isLoading, hasError, isPiPActive])
+
+  // Handle PiP state changes
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handleEnterPiP = () => setIsPiPActive(true)
+    const handleLeavePiP = () => setIsPiPActive(false)
+
+    video.addEventListener('enterpictureinpicture', handleEnterPiP)
+    video.addEventListener('leavepictureinpicture', handleLeavePiP)
+
+    return () => {
+      video.removeEventListener('enterpictureinpicture', handleEnterPiP)
+      video.removeEventListener('leavepictureinpicture', handleLeavePiP)
+    }
+  }, [])
 
   const handleLoadedData = () => {
     setIsLoading(false)
@@ -42,8 +115,25 @@ function ProductVideo({ url, index }: { url: string; index: number }) {
   const handlePlay = () => setIsPlaying(true)
   const handlePause = () => setIsPlaying(false)
 
+  // Toggle Picture-in-Picture mode
+  const togglePiP = async () => {
+    const video = videoRef.current
+    if (!video || !isPiPSupported) return
+
+    try {
+      if (document.pictureInPictureElement === video) {
+        await document.exitPictureInPicture()
+      } else {
+        await video.requestPictureInPicture()
+      }
+    } catch (error) {
+      console.error('[ProductVideo] PiP error:', error)
+      toast.error('Picture-in-Picture is not available')
+    }
+  }
+
   return (
-    <div className="relative rounded-lg bg-secondary group">
+    <div ref={containerRef} className="relative rounded-lg bg-secondary group">
       {/* Loading State */}
       {isLoading && !hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-secondary z-10 min-h-[200px]">
@@ -88,19 +178,32 @@ function ProductVideo({ url, index }: { url: string; index: number }) {
         onError={handleError}
         onPlay={handlePlay}
         onPause={handlePause}
-        onMouseEnter={(e) => {
-          const video = e.currentTarget
-          video.muted = true
-          video.play().catch(() => {})
-        }}
-        onMouseLeave={(e) => {
-          const video = e.currentTarget
-          if (!video.paused) {
-            video.pause()
-            video.currentTime = 0
-          }
-        }}
       />
+
+      {/* Picture-in-Picture Toggle Button */}
+      {isPiPSupported && !isLoading && !hasError && (
+        <button
+          onClick={togglePiP}
+          className={cn(
+            "absolute top-3 right-3 z-20",
+            "w-10 h-10 rounded-full",
+            "flex items-center justify-center",
+            "transition-all duration-200",
+            "focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+            // Light/Dark mode adaptive styling
+            isPiPActive
+              ? "bg-accent text-accent-foreground shadow-lg"
+              : "bg-background/80 dark:bg-background/90 text-foreground hover:bg-background shadow-md backdrop-blur-sm",
+            // Show on hover or when PiP is active
+            "opacity-0 group-hover:opacity-100",
+            isPiPActive && "opacity-100"
+          )}
+          title={isPiPActive ? "Exit Picture-in-Picture" : "Picture-in-Picture"}
+          aria-label={isPiPActive ? "Exit Picture-in-Picture" : "Enter Picture-in-Picture"}
+        >
+          <PictureInPicture2 className="h-5 w-5" />
+        </button>
+      )}
 
       {/* Play Overlay (visible when not loading, no error, and not playing) */}
       {!isLoading && !hasError && !isPlaying && (
