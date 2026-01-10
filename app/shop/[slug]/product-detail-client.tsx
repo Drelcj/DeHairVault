@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft } from 'lucide-react'
+import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { cn } from '@/lib/utils'
@@ -127,7 +127,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       <div className="grid lg:grid-cols-2 gap-12">
         {/* Product Images */}
         <div className="space-y-4">
-          {/* Main Image with Auto-Carousel (4-second intervals for focused viewing) */}
+          {/* Main Image Carousel with Auto-Carousel (4-second intervals for focused viewing) */}
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-secondary">
             <ImageCarousel
               images={images}
@@ -156,7 +156,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="grid grid-cols-4 gap-3">
               {images.map((image, index) => (
                 <button
-                  key={index}
+                  key={`image-${index}`}
                   onClick={() => setSelectedImageIndex(index)}
                   className={cn(
                     'relative aspect-square rounded-lg overflow-hidden border-2 transition-all',
@@ -369,7 +369,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </div>
           </div>
 
-          {/* Product Video */}
+          {/* Product Video (YouTube) */}
           {product.video_url && getYouTubeVideoId(product.video_url) && (
             <div className="pt-6 border-t border-border">
               <h3 className="text-lg font-medium text-foreground mb-3">Product Video</h3>
@@ -381,6 +381,49 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   allowFullScreen
                   className="absolute inset-0 w-full h-full"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Cloudinary Videos Section */}
+          {product.video_urls && product.video_urls.length > 0 && (
+            <div className="pt-6 border-t border-border">
+              <h3 className="text-lg font-medium text-foreground mb-3 flex items-center gap-2">
+                <Play className="h-5 w-5 text-accent" />
+                Product Videos
+              </h3>
+              <div className={cn(
+                "grid gap-4",
+                product.video_urls.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
+              )}>
+                {product.video_urls.map((videoUrl, index) => (
+                  <div key={index} className="relative aspect-video rounded-lg overflow-hidden bg-secondary group">
+                    <video
+                      src={videoUrl}
+                      controls
+                      playsInline
+                      muted
+                      preload="metadata"
+                      className="w-full h-full object-cover"
+                      onMouseEnter={(e) => {
+                        const video = e.currentTarget
+                        video.muted = true
+                        video.play().catch(() => {})
+                      }}
+                      onMouseLeave={(e) => {
+                        const video = e.currentTarget
+                        video.pause()
+                        video.currentTime = 0
+                      }}
+                    />
+                    {/* Play Overlay (visible until video starts playing) */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
+                      <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                        <Play className="h-8 w-8 text-foreground ml-1" fill="currentColor" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

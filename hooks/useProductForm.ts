@@ -28,6 +28,7 @@ const defaultValues: ProductFormValues = {
   images: [],
   thumbnail_url: null,
   video_url: null,
+  video_urls: [],
   is_active: true,
   is_featured: false,
   is_new_arrival: false,

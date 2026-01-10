@@ -117,6 +117,7 @@ export interface Product {
   images: string[];
   thumbnail_url: string | null;
   video_url: string | null;
+  video_urls: string[] | null;
   is_active: boolean;
   is_featured: boolean;
   is_new_arrival: boolean;

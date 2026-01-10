@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { TagInput } from '@/components/ui/tag-input'
 import { CreatableSelect } from '@/components/ui/creatable-select'
+import { VideoUrlInput } from '@/components/admin/video-url-input'
 import { hairCategoryOptions, hairGradeOptions, hairOriginOptions, drawTypeOptions } from '@/lib/constants/enums'
 import { getHairTextures, createHairTexture, type HairTextureOption } from '@/lib/actions/textures'
 import { useProductForm } from '@/hooks/useProductForm'
@@ -464,14 +465,24 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="video_url">Video URL</Label>
+              <Label htmlFor="video_url">YouTube Video URL (for product page)</Label>
               <Input
                 id="video_url"
                 value={form.values.video_url ?? ''}
                 onChange={(e) => form.updateField('video_url', e.target.value || null)}
-                placeholder="https://..."
+                placeholder="https://youtube.com/watch?v=..."
                 className="bg-background"
               />
+              <p className="text-xs text-muted-foreground">YouTube video to display in product details section</p>
+            </div>
+
+            {/* Cloudinary Video URLs for Media Carousel */}
+            <div className="space-y-3 md:col-span-2">
+              <VideoUrlInput
+                value={form.values.video_urls ?? []}
+                onChange={(urls) => form.updateField('video_urls', urls)}
+              />
+              <p className="text-xs text-muted-foreground">Cloudinary videos to show in the product image carousel</p>
             </div>
           </div>
         </div>

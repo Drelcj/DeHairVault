@@ -29,6 +29,7 @@ function normalizeProductPayload(payload: ProductFormValues) {
     images: payload.images,
     thumbnail_url: payload.thumbnail_url,
     video_url: payload.video_url,
+    video_urls: payload.video_urls || null,
     is_active: payload.is_active,
     is_featured: payload.is_featured,
     is_new_arrival: payload.is_new_arrival,

@@ -36,6 +36,7 @@ export interface ProductFormValues {
   images: string[]
   thumbnail_url: string | null
   video_url: string | null
+  video_urls: string[]
   is_active: boolean
   is_featured: boolean
   is_new_arrival: boolean
