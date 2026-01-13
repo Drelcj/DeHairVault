@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Package, Plus, Search } from "lucide-react"
 import { createServiceClient } from "@/lib/supabase/server"
 import { ProductsTableClient } from "./_components/products-table-client"
+import { FixSlugsButton } from "./_components/fix-slugs-button"
 
 export const dynamic = 'force-dynamic'
 
@@ -60,13 +61,18 @@ export default async function AdminProductsPage({
             Manage your product catalog ({data.total} products)
           </p>
         </div>
-        <Link 
-          href="/admin/products/new" 
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Product
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Temporary: Remove after slug migration is complete */}
+          <FixSlugsButton />
+          
+          <Link 
+            href="/admin/products/new" 
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Product
+          </Link>
+        </div>
       </div>
 
       {/* Search */}

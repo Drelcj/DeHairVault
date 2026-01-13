@@ -71,26 +71,91 @@ export async function getProducts(filters?: ProductFilters): Promise<Product[]> 
   }
 }
 
+/**
+ * Normalize a slug for consistent matching:
+ * - Decode URL encoding (%20 -> space)
+ * - Convert to lowercase
+ * - Replace spaces and multiple dashes with single dashes
+ * - Remove leading/trailing dashes
+ */
+function normalizeSlug(slug: string): string {
+  return decodeURIComponent(slug)
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')  // Replace spaces and underscores with dashes
+    .replace(/-+/g, '-')       // Replace multiple dashes with single dash
+    .replace(/^-+|-+$/g, '')   // Remove leading/trailing dashes
+}
+
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   try {
     // Use service client to bypass RLS for reliable public access
     const supabase = createServiceClient()
     
-    console.log(`[getProductBySlug] Looking up product with slug: ${slug}`)
+    // Normalize the incoming slug
+    const normalizedSlug = normalizeSlug(slug)
+    const decodedSlug = decodeURIComponent(slug)
     
-    const { data, error } = await supabase
+    console.log(`[getProductBySlug] Looking up product with slug: "${slug}"`)
+    console.log(`[getProductBySlug] Normalized slug: "${normalizedSlug}"`)
+    
+    // Strategy 1: Try exact match with normalized slug
+    let { data, error } = await supabase
       .from('products')
       .select('*')
-      .eq('slug', slug)
+      .eq('slug', normalizedSlug)
       .eq('is_active', true)
       .single()
 
-    if (error) {
-      console.error('[getProductBySlug] Error fetching product by slug:', error.message, { slug })
+    if (!data && !error?.message?.includes('multiple')) {
+      // Strategy 2: Try with decoded but non-normalized slug (for legacy data)
+      const result = await supabase
+        .from('products')
+        .select('*')
+        .eq('slug', decodedSlug)
+        .eq('is_active', true)
+        .single()
+      
+      data = result.data
+      error = result.error
+    }
+
+    if (!data && !error?.message?.includes('multiple')) {
+      // Strategy 3: Case-insensitive match using ilike
+      const result = await supabase
+        .from('products')
+        .select('*')
+        .ilike('slug', normalizedSlug)
+        .eq('is_active', true)
+        .single()
+      
+      data = result.data
+      error = result.error
+    }
+
+    if (!data && !error?.message?.includes('multiple')) {
+      // Strategy 4: Try matching with original slug (mixed case with spaces)
+      const result = await supabase
+        .from('products')
+        .select('*')
+        .ilike('slug', decodedSlug.replace(/ /g, '%'))  // Allow spaces to match anything
+        .eq('is_active', true)
+        .single()
+      
+      data = result.data
+      error = result.error
+    }
+
+    if (error && !error.message?.includes('0 rows')) {
+      console.error('[getProductBySlug] Error fetching product by slug:', error.message, { slug, normalizedSlug })
       return null
     }
 
-    console.log(`[getProductBySlug] Found product: ${data?.name}`)
+    if (data) {
+      console.log(`[getProductBySlug] Found product: ${data.name}`)
+    } else {
+      console.log(`[getProductBySlug] No product found for slug: "${slug}"`)
+    }
+    
     return data
   } catch (error) {
     console.error('[getProductBySlug] Error in getProductBySlug:', error)

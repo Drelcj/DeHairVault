@@ -14,6 +14,17 @@ import { useCurrency } from "@/contexts/currency-context"
 import { toast } from "sonner"
 import type { Product } from "@/types/database.types"
 
+/**
+ * Normalize a slug for consistent URL generation
+ */
+function normalizeSlugForUrl(slug: string): string {
+  return slug
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 interface ProductCardProps {
   product: Product
 }
@@ -86,8 +97,9 @@ export function ProductCard({ product }: ProductCardProps) {
     console.error('[ProductCard] Product is missing slug:', product.name, product.id)
   }
 
-  // If no slug, don't link anywhere (just show the card without navigation)
-  const productUrl = product.slug ? `/shop/${product.slug}` : '#'
+  // Normalize slug for consistent URLs (handles legacy data with spaces/mixed case)
+  const normalizedSlug = product.slug ? normalizeSlugForUrl(product.slug) : ''
+  const productUrl = normalizedSlug ? `/shop/${normalizedSlug}` : '#'
 
   return (
     <Link href={productUrl} className="block" onClick={(e) => {

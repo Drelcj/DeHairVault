@@ -4,10 +4,24 @@ import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { ActionResult, ProductFormValues, ProductVariantInput } from '@/types/admin'
 
+/**
+ * Normalize a product slug to URL-safe format:
+ * - Lowercase
+ * - Replace spaces and underscores with dashes
+ * - Remove special characters
+ * - Remove leading/trailing dashes
+ */
+function normalizeSlug(slug: string): string {
+  return slug
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 function normalizeProductPayload(payload: ProductFormValues) {
   return {
     name: payload.name,
-    slug: payload.slug,
+    slug: normalizeSlug(payload.slug), // Always normalize slug on save
     description: payload.description,
     short_description: payload.short_description,
     features: payload.features || null,
@@ -92,4 +106,61 @@ export async function updateProductAction(id: string, payload: ProductFormValues
   revalidatePath('/admin/products')
   revalidatePath(`/admin/products/${id}`)
   return { success: true, id, message: 'Product updated' }
+}
+
+/**
+ * Fix all product slugs in the database to be URL-safe
+ * This is a one-time migration action for legacy data
+ */
+export async function fixAllProductSlugsAction(): Promise<ActionResult> {
+  const supabase = createServiceClient()
+  
+  try {
+    // Fetch all products
+    const { data: products, error: fetchError } = await supabase
+      .from('products')
+      .select('id, name, slug')
+    
+    if (fetchError || !products) {
+      return { success: false, error: fetchError?.message || 'Failed to fetch products' }
+    }
+    
+    let fixedCount = 0
+    const errors: string[] = []
+    
+    for (const product of products) {
+      const currentSlug = product.slug || ''
+      const normalizedSlug = normalizeSlug(currentSlug || product.name)
+      
+      // Only update if slug has changed
+      if (currentSlug !== normalizedSlug) {
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ slug: normalizedSlug })
+          .eq('id', product.id)
+        
+        if (updateError) {
+          errors.push(`Failed to update "${product.name}": ${updateError.message}`)
+        } else {
+          console.log(`[fixAllProductSlugs] Fixed slug: "${currentSlug}" -> "${normalizedSlug}" for product "${product.name}"`)
+          fixedCount++
+        }
+      }
+    }
+    
+    revalidatePath('/admin/products')
+    revalidatePath('/shop')
+    
+    if (errors.length > 0) {
+      return {
+        success: true,
+        message: `Fixed ${fixedCount} product slugs. ${errors.length} errors: ${errors.join(', ')}`
+      }
+    }
+    
+    return { success: true, message: `Successfully fixed ${fixedCount} product slugs` }
+  } catch (error) {
+    console.error('[fixAllProductSlugsAction] Error:', error)
+    return { success: false, error: 'Failed to fix product slugs' }
+  }
 }
