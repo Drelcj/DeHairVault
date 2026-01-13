@@ -27,6 +27,8 @@ function normalizeSlugForUrl(slug: string): string {
 
 interface ProductCardProps {
   product: Product
+  /** Index in the grid for staggered carousel timing */
+  index?: number
 }
 
 // Helper function to format texture for display
@@ -37,7 +39,17 @@ function formatTexture(texture: string): string {
     .join(' ')
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+/**
+ * Generate a stable stagger index from product ID
+ * This ensures consistent timing for the same product across renders
+ */
+function getStaggerIndex(productId: string, gridIndex: number = 0): number {
+  // Use first few characters of UUID to generate a number
+  const idNum = parseInt(productId.replace(/-/g, '').slice(0, 8), 16)
+  return (idNum + gridIndex) % 10
+}
+
+export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
@@ -113,13 +125,14 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="relative bg-card rounded-xl overflow-hidden border border-border hover:border-accent/50 transition-all duration-500 hover:shadow-xl hover:shadow-accent/5">
           {/* Image Container */}
           <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-secondary via-muted to-secondary">
-            {/* Image Carousel - activates on hover for products with multiple images */}
+            {/* Image Carousel - auto-rotates continuously, pauses on hover */}
             {productImages.length > 1 ? (
               <ImageCarousel
                 images={productImages}
                 alt={product.name}
-                mode="browse"
-                isActive={isHovered}
+                mode="card"
+                staggerIndex={getStaggerIndex(product.id, index)}
+                isActive={!isHovered} // Pauses on hover (isActive=false when hovered)
                 className={cn(
                   "transition-transform duration-700",
                   isHovered ? "scale-110" : "scale-100"

@@ -37,7 +37,7 @@ export function ProductGrid({ products }: ProductGridProps) {
           className="animate-fade-in-up"
           style={{ animationDelay: `${index * 50}ms` }}
         >
-          <ProductCard product={product} />
+          <ProductCard product={product} index={index} />
         </div>
       ))}
     </div>

@@ -4,25 +4,31 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
-export type CarouselMode = 'browse' | 'view' | 'origin'
+export type CarouselMode = 'browse' | 'view' | 'origin' | 'card'
 
 interface ImageCarouselProps {
   images: string[]
   alt: string
   mode?: CarouselMode
   /**
-   * For origin cards, pass a unique index to create staggered timing
+   * For origin/card modes, pass a unique index to create staggered timing
    */
   staggerIndex?: number
   className?: string
   /**
-   * Whether the carousel should be active (e.g., on hover for product cards)
+   * Whether the carousel should be active
+   * - For 'browse' mode: carousel runs only when isActive=true
+   * - For 'card' mode: carousel runs continuously, pauses when isActive=false (hover pause)
+   * - For 'view'/'origin' modes: always runs
    */
   isActive?: boolean
 }
 
 // Staggered intervals for origin cards (creating organic, varied feel)
 const ORIGIN_INTERVALS = [1300, 1700, 2200, 2900, 1500, 2400]
+
+// Staggered start delays for card mode (0-500ms offsets)
+const CARD_START_DELAYS = [0, 150, 80, 230, 120, 180, 50, 280, 170, 90]
 
 /**
  * Calculate the rotation interval based on mode and image count
@@ -37,17 +43,32 @@ function getIntervalMs(mode: CarouselMode, imageCount: number, staggerIndex: num
       // Origin cards: staggered unique intervals for organic feel
       return ORIGIN_INTERVALS[staggerIndex % ORIGIN_INTERVALS.length]
     
+    case 'card':
+      // Product cards (continuous): density-based timing
+      if (imageCount >= 5) {
+        // Many images: faster rotation (1.0-1.5s) with slight variation per card
+        return 1000 + (staggerIndex % 5) * 100
+      } else {
+        // Fewer images: slower rotation (2.0-3.0s) with variation
+        return 2000 + (staggerIndex % 5) * 200
+      }
+    
     case 'browse':
     default:
-      // Product cards: speed based on image count
+      // Legacy browse mode (hover-activated)
       if (imageCount >= 5) {
-        // Many images: faster rotation (1-1.5 seconds)
         return 1000 + Math.random() * 500
       } else {
-        // Fewer images: slower rotation (2-3 seconds)
         return 2000 + Math.random() * 1000
       }
   }
+}
+
+/**
+ * Get staggered start delay for natural feel (prevents all cards flipping at once)
+ */
+function getStartDelay(staggerIndex: number): number {
+  return CARD_START_DELAYS[staggerIndex % CARD_START_DELAYS.length]
 }
 
 export function ImageCarousel({ 
@@ -61,16 +82,53 @@ export function ImageCarousel({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [intervalMs, setIntervalMs] = useState<number | null>(null)
+  const [hasStarted, setHasStarted] = useState(false)
 
-  // Calculate interval on mount (with stable random seed for browse mode)
+  // Calculate interval on mount (with stable values for consistent timing)
   useEffect(() => {
     if (images.length <= 1) return
     setIntervalMs(getIntervalMs(mode, images.length, staggerIndex))
   }, [mode, images.length, staggerIndex])
 
+  // Staggered start delay for 'card' mode (natural, organic feel)
+  useEffect(() => {
+    if (mode !== 'card' || images.length <= 1) {
+      setHasStarted(true)
+      return
+    }
+    
+    const startDelay = getStartDelay(staggerIndex)
+    const timer = setTimeout(() => setHasStarted(true), startDelay)
+    return () => clearTimeout(timer)
+  }, [mode, staggerIndex, images.length])
+
+  // Determine if carousel should be running
+  const shouldRun = useMemo(() => {
+    if (images.length <= 1 || intervalMs === null || !hasStarted) return false
+    
+    switch (mode) {
+      case 'card':
+        // Card mode: runs continuously, pauses when NOT hovered (isActive=false means paused)
+        // Actually we want: runs always, pauses on hover
+        // So isActive=true means "user is hovering" = pause
+        // Wait, that's backwards. Let me think...
+        // isActive for card mode: true = not hovering (run), false = hovering (pause)
+        return isActive
+      case 'browse':
+        // Browse mode: only runs when hovered (isActive=true)
+        return isActive
+      case 'view':
+      case 'origin':
+        // Always runs
+        return true
+      default:
+        return isActive
+    }
+  }, [mode, isActive, images.length, intervalMs, hasStarted])
+
   // Handle the carousel rotation
   useEffect(() => {
-    if (!isActive || images.length <= 1 || intervalMs === null) return
+    if (!shouldRun) return
 
     const interval = setInterval(() => {
       setIsTransitioning(true)
@@ -81,18 +139,18 @@ export function ImageCarousel({
         setIsTransitioning(false)
       }, 400) // Fade-out duration
       
-    }, intervalMs)
+    }, intervalMs!)
 
     return () => clearInterval(interval)
-  }, [images.length, intervalMs, isActive])
+  }, [images.length, intervalMs, shouldRun])
 
-  // Reset to first image when becoming inactive
+  // Reset to first image when becoming inactive (only for browse mode)
   useEffect(() => {
-    if (!isActive) {
+    if (mode === 'browse' && !isActive) {
       setCurrentIndex(0)
       setIsTransitioning(false)
     }
-  }, [isActive])
+  }, [isActive, mode])
 
   if (images.length === 0) {
     return (
