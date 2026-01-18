@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { Truck, Info } from 'lucide-react'
 import { useCurrency } from '@/contexts/currency-context'
+import { formatNGN, formatGBP } from '@/lib/utils/currency'
 import type { CartWithItems } from '@/lib/actions/cart'
 
 interface OrderSummaryProps {
@@ -34,13 +35,6 @@ export function OrderSummary({
     0
   )
   const total = subtotal + shippingCost + tax - discount
-
-  const formatGBP = (amount: number) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-    }).format(amount)
-  }
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-all duration-300">

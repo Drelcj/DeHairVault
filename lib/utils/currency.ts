@@ -113,3 +113,45 @@ export function formatPriceRange(
   }
   return `${formatPrice(minPrice, currency)} - ${formatPrice(maxPrice, currency)}`;
 }
+
+/**
+ * Format amount in Nigerian Naira (NGN)
+ * Defensive: handles null, undefined, and NaN values
+ * @param amount - Amount to format
+ * @returns Formatted NGN string
+ */
+export function formatNGN(amount: number | null | undefined): string {
+  if (amount == null || isNaN(amount)) return '₦0.00';
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+  }).format(amount);
+}
+
+/**
+ * Format amount in British Pounds (GBP)
+ * Defensive: handles null, undefined, and NaN values
+ * @param amount - Amount to format
+ * @returns Formatted GBP string
+ */
+export function formatGBP(amount: number | null | undefined): string {
+  if (amount == null || isNaN(amount)) return '£0.00';
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+  }).format(amount);
+}
+
+/**
+ * Format amount in US Dollars (USD)
+ * Defensive: handles null, undefined, and NaN values
+ * @param amount - Amount to format
+ * @returns Formatted USD string
+ */
+export function formatUSD(amount: number | null | undefined): string {
+  if (amount == null || isNaN(amount)) return '$0.00';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+}
