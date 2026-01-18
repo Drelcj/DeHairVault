@@ -7,21 +7,44 @@ import { createClient } from '@/lib/supabase/server'
 // Note: Let Stripe SDK use its default API version for compatibility
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-// Get the app URL with validation
-function getAppUrl(): string {
+// Production fallback URL (hardcoded for safety)
+const PRODUCTION_URL = 'https://www.dehairvault.com'
+
+// Get the app URL with validation and fallback
+function getAppUrl(request: NextRequest): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const isProduction = process.env.NODE_ENV === 'production'
   
-  if (!appUrl) {
-    throw new Error('NEXT_PUBLIC_APP_URL is not configured')
+  // If env var is set and valid (not localhost in production), use it
+  if (appUrl && !(isProduction && appUrl.includes('localhost'))) {
+    return appUrl.replace(/\/$/, '')
   }
   
-  // In production, ensure we're not using localhost
-  if (process.env.NODE_ENV === 'production' && appUrl.includes('localhost')) {
-    throw new Error('NEXT_PUBLIC_APP_URL cannot be localhost in production')
+  // Fallback strategy for production
+  if (isProduction) {
+    // Try to get origin from request headers
+    const origin = request.headers.get('origin')
+    const host = request.headers.get('host')
+    
+    if (origin && !origin.includes('localhost')) {
+      console.warn('Using request origin as fallback:', origin)
+      return origin.replace(/\/$/, '')
+    }
+    
+    if (host && !host.includes('localhost')) {
+      const protocol = request.headers.get('x-forwarded-proto') || 'https'
+      const fallbackUrl = `${protocol}://${host}`
+      console.warn('Using request host as fallback:', fallbackUrl)
+      return fallbackUrl.replace(/\/$/, '')
+    }
+    
+    // Last resort: use hardcoded production URL
+    console.warn('Using hardcoded production URL as fallback:', PRODUCTION_URL)
+    return PRODUCTION_URL
   }
   
-  // Remove trailing slash if present
-  return appUrl.replace(/\/$/, '')
+  // Development fallback
+  return appUrl?.replace(/\/$/, '') || 'http://localhost:3000'
 }
 
 export async function POST(request: NextRequest) {
@@ -35,8 +58,8 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Validate APP_URL is configured
-    const appUrl = getAppUrl()
+    // Get APP_URL with fallback strategy
+    const appUrl = getAppUrl(request)
 
     const body = await request.json()
     const { orderId, orderNumber } = body
