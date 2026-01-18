@@ -20,14 +20,10 @@ interface CachedRate {
 let cachedGbpToUsd: CachedRate | null = null
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour in milliseconds
 
-interface ExchangeRateResult {
-  success: true
-  rate: number
-  source: 'api' | 'cache'
-} | {
-  success: false
-  error: string
-}
+// Exchange rate result type - either success with rate or failure with error
+type ExchangeRateResult = 
+  | { success: true; rate: number; source: 'api' | 'cache' }
+  | { success: false; error: string }
 
 /**
  * Fetches live GBP to USD exchange rate with 1-hour caching
