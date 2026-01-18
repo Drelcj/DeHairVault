@@ -97,15 +97,38 @@ export async function createOrder(
       }
     }
 
-    // Calculate totals
+    // Calculate totals - use cart's pre-calculated NGN values
+    // The cart now includes subtotalNgn calculated from the exchange rate
     const subtotalNgn = cart.subtotalNgn
+    
+    // Validate subtotalNgn is a valid number (not null, undefined, or NaN)
+    if (subtotalNgn == null || isNaN(subtotalNgn) || subtotalNgn < 0) {
+      console.error('Invalid subtotalNgn from cart:', { subtotalNgn, cartId: cart.id })
+      return { 
+        success: false, 
+        error: 'Unable to calculate order total. Please refresh and try again.' 
+      }
+    }
+    
     // TODO: Uncomment when DHL shipping is integrated
     // const shippingCostNgn = await calculateShippingCost(formData.shippingCountry)
     const shippingCostNgn = 0 // Temporarily disabled for payment testing
     const taxNgn = 0 // Tax calculation can be added later
     const discountNgn = formData.discountNgn || 0
     const totalNgn = subtotalNgn + shippingCostNgn + taxNgn - discountNgn
-    const totalDisplayCurrency = totalNgn / formData.exchangeRate
+    
+    // Validate totalNgn is valid before proceeding
+    if (isNaN(totalNgn) || totalNgn < 0) {
+      console.error('Invalid totalNgn calculated:', { subtotalNgn, shippingCostNgn, taxNgn, discountNgn, totalNgn })
+      return { 
+        success: false, 
+        error: 'Unable to calculate order total. Please refresh and try again.' 
+      }
+    }
+    
+    // Use the cart's exchange rate for consistency, or fall back to form data
+    const exchangeRate = cart.exchangeRate || formData.exchangeRate || 1950
+    const totalDisplayCurrency = totalNgn / exchangeRate
 
     // Generate order number
     const orderNumber = generateOrderNumber()
@@ -150,7 +173,7 @@ export async function createOrder(
       discount_ngn: discountNgn,
       total_ngn: totalNgn,
       display_currency: formData.displayCurrency,
-      exchange_rate: formData.exchangeRate,
+      exchange_rate: exchangeRate,
       total_display_currency: totalDisplayCurrency,
       payment_method: formData.paymentMethod,
       payment_status: 'pending',

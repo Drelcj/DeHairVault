@@ -7,6 +7,9 @@ import type { CartItem, Product } from '@/types/database.types'
 // Cart expiration period (authenticated users only)
 const CART_EXPIRY_DAYS = 30
 
+// Default exchange rate: GBP to NGN (used as fallback if database rate unavailable)
+const DEFAULT_GBP_TO_NGN = 1950
+
 export interface CartItemWithProduct extends CartItem {
   product: Product
 }
@@ -16,6 +19,8 @@ export interface CartWithItems {
   items: CartItemWithProduct[]
   itemCount: number
   subtotalGbp: number
+  subtotalNgn: number
+  exchangeRate: number
 }
 
 // Helper to get or create cart for authenticated user
@@ -85,13 +90,33 @@ export async function addToCart(
     }
 
     // Calculate price (in GBP)
-    let unitPrice = (product as any).base_price_gbp
+    let unitPriceGbp = (product as any).base_price_gbp
     if (selectedLength && (product as any).length_price_modifiers) {
       const modifier = (product as any).length_price_modifiers[selectedLength.toString()]
       if (modifier) {
-        unitPrice = modifier
+        unitPriceGbp = modifier
       }
     }
+
+    // Fetch NGN exchange rate to convert GBP to NGN for storage
+    let exchangeRate = DEFAULT_GBP_TO_NGN
+    try {
+      const { data: rateData } = await supabase
+        .from('exchange_rates')
+        .select('rate_from_gbp')
+        .eq('currency_code', 'NGN')
+        .eq('is_active', true)
+        .single()
+      
+      if (rateData?.rate_from_gbp) {
+        exchangeRate = rateData.rate_from_gbp
+      }
+    } catch (e) {
+      console.warn('Failed to fetch NGN exchange rate for cart, using default:', DEFAULT_GBP_TO_NGN)
+    }
+
+    // Convert to NGN for storage (database uses NGN as canonical currency)
+    const unitPriceNgn = Math.round(unitPriceGbp * exchangeRate * 100) / 100
 
     // Check if item already exists in cart
     let existingItemQuery = supabase
@@ -144,7 +169,7 @@ export async function addToCart(
         product_id: productId,
         quantity,
         selected_length: selectedLength,
-        unit_price_ngn: unitPrice,
+        unit_price_ngn: unitPriceNgn,
       } as any)
 
       if (insertError) {
@@ -288,11 +313,34 @@ export async function getCart(): Promise<CartWithItems | null> {
       0
     )
 
+    // Fetch NGN exchange rate from database
+    let exchangeRate = DEFAULT_GBP_TO_NGN
+    try {
+      const { data: rateData } = await supabase
+        .from('exchange_rates')
+        .select('rate_from_gbp')
+        .eq('currency_code', 'NGN')
+        .eq('is_active', true)
+        .single()
+      
+      if (rateData?.rate_from_gbp) {
+        exchangeRate = rateData.rate_from_gbp
+      }
+    } catch (e) {
+      // Use default rate if fetch fails
+      console.warn('Failed to fetch NGN exchange rate, using default:', DEFAULT_GBP_TO_NGN)
+    }
+
+    // Calculate NGN subtotal
+    const subtotalNgn = Math.round(subtotalGbp * exchangeRate * 100) / 100
+
     return {
       id: (cart as any).id,
       items: cartItems,
       itemCount,
       subtotalGbp,
+      subtotalNgn,
+      exchangeRate,
     }
   } catch (error) {
     console.error('Error fetching cart:', error)
