@@ -8,80 +8,6 @@ import { createClient } from '@/lib/supabase/server'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 // ============================================================================
-// DYNAMIC EXCHANGE RATE WITH CACHING
-// ============================================================================
-
-// Cache for exchange rate (1 hour TTL)
-interface CachedRate {
-  rate: number
-  timestamp: number
-}
-
-let cachedGbpToUsd: CachedRate | null = null
-const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour in milliseconds
-
-// Exchange rate result type - either success with rate or failure with error
-type ExchangeRateResult = 
-  | { success: true; rate: number; source: 'api' | 'cache' }
-  | { success: false; error: string }
-
-/**
- * Fetches live GBP to USD exchange rate with 1-hour caching
- * Returns error if API fails - no hardcoded fallbacks
- */
-async function getLiveGbpToUsdRate(): Promise<ExchangeRateResult> {
-  const now = Date.now()
-  
-  // Check if we have a valid cached rate
-  if (cachedGbpToUsd && (now - cachedGbpToUsd.timestamp) < CACHE_TTL_MS) {
-    console.log(`[ExchangeRate] Using cached GBP→USD rate: ${cachedGbpToUsd.rate}`)
-    return { success: true, rate: cachedGbpToUsd.rate, source: 'cache' }
-  }
-  
-  try {
-    // Use Frankfurter API (free, no API key required)
-    const response = await fetch(
-      'https://api.frankfurter.app/latest?from=GBP&to=USD',
-      { 
-        next: { revalidate: 3600 }, // Next.js cache for 1 hour
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      }
-    )
-    
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}: ${response?.statusText}`)
-    }
-    
-    const data = await response?.json()
-    const rate = data?.rates?.USD
-    
-    if (typeof rate !== 'number' || isNaN(rate) || rate <= 0) {
-      throw new Error(`Invalid rate received: ${rate}`)
-    }
-    
-    // Update cache
-    cachedGbpToUsd = { rate, timestamp: now }
-    console.log(`[ExchangeRate] Fetched live GBP→USD rate: ${rate}`)
-    
-    return { success: true, rate, source: 'api' }
-  } catch (error) {
-    console.error('[ExchangeRate] Failed to fetch live rate:', error)
-    
-    // If we have an expired cache, use it as emergency fallback
-    if (cachedGbpToUsd) {
-      console.warn('[ExchangeRate] Using expired cache as emergency fallback')
-      return { success: true, rate: cachedGbpToUsd.rate, source: 'cache' }
-    }
-    
-    // No cache available - return error
-    return { 
-      success: false, 
-      error: 'Exchange rate service is temporarily unavailable. Please try again in a few moments.' 
-    }
-  }
-}
-
-// ============================================================================
 // APP URL HELPER
 // ============================================================================
 
@@ -177,8 +103,10 @@ export async function POST(request: NextRequest) {
     }
 
     // ========================================================================
-    // CURRENCY CONVERSION: NGN -> GBP -> USD (with live rate, integer math)
+    // CURRENCY CONVERSION: NGN -> GBP (Native GBP - Stripe handles FX)
     // ========================================================================
+    // We send GBP to Stripe and let Stripe convert to merchant's payout currency.
+    // This avoids double conversion errors and uses Stripe's mid-market rates.
     
     // Get NGN to GBP rate from database (with optional chaining)
     const exchangeRates = await getExchangeRates()
@@ -194,72 +122,52 @@ export async function POST(request: NextRequest) {
     
     const ngnToGbpRate = ngnRate.rate_from_gbp
     
-    // Get LIVE GBP to USD rate (cached for 1 hour) - NO HARDCODED FALLBACK
-    const rateResult = await getLiveGbpToUsdRate()
-    
-    if (!rateResult.success) {
-      console.error('[Stripe] Exchange rate API unavailable:', rateResult.error)
-      return NextResponse.json(
-        { error: rateResult.error },
-        { status: 503 } // Service Unavailable
-      )
-    }
-    
-    const gbpToUsdRate = rateResult.rate
-    
     // Convert using INTEGER MATH to avoid floating point errors
-    // Work in smallest units: kobo (NGN) -> pence (GBP) -> cents (USD)
+    // Work in smallest units: kobo (NGN) -> pence (GBP)
     const totalKobo = Math.round(order.total_ngn * 100) // Convert NGN to kobo
     const totalPence = Math.round(totalKobo / ngnToGbpRate) // Convert kobo to pence
-    const totalCents = Math.round(totalPence * gbpToUsdRate) // Convert pence to cents
     
     // For display/logging only
     const amountInGBP = totalPence / 100
-    const amountInUSD = totalCents / 100
     
-    // Log for Vercel verification
-    console.log(`[Stripe] Order ${orderNumber} conversion:`, {
+    // Log final Stripe payload for Vercel verification
+    console.log(`[Stripe] Order ${orderNumber} - Final Stripe Payload:`, {
       total_ngn: order.total_ngn,
       totalKobo,
       ngnToGbpRate,
       totalPence,
-      amountInGBP: amountInGBP.toFixed(2),
-      gbpToUsdRate,
-      rateSource: rateResult.source,
-      totalCents,
-      amountInUSD: amountInUSD.toFixed(2)
+      amount: totalPence,
+      currency: 'gbp',
+      amountInGBP: `£${amountInGBP.toFixed(2)}`
     })
-    console.log(`[Stripe] Stripe Charge (USD): $${amountInUSD.toFixed(2)}`)
     
-    // Validate amounts
-    if (totalCents <= 0 || isNaN(totalCents)) {
-      console.error('[Stripe] Invalid USD amount calculated:', { 
+    // Validate amount (Stripe minimum is 30 pence for GBP)
+    if (totalPence < 30 || isNaN(totalPence)) {
+      console.error('[Stripe] Invalid GBP amount calculated:', { 
         total_ngn: order.total_ngn, 
         totalKobo,
         ngnToGbpRate, 
-        gbpToUsdRate,
-        totalCents
+        totalPence
       })
       return NextResponse.json(
-        { error: 'Failed to calculate payment amount' },
+        { error: 'Order amount is below the minimum payment threshold. Please contact support.' },
         { status: 400 }
       )
     }
 
-    // Create line items from order items with INTEGER MATH to avoid rounding errors
+    // Create line items from order items with INTEGER MATH (in pence for GBP)
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
       order?.order_items?.map((item: any) => {
-        // Convert item price: kobo -> pence -> cents (integer math)
+        // Convert item price: kobo -> pence (integer math)
         const itemKobo = Math.round((item?.unit_price_ngn ?? 0) * 100)
         const itemPence = Math.round(itemKobo / ngnToGbpRate)
-        const itemCents = Math.round(itemPence * gbpToUsdRate)
         
-        // Ensure amount is valid
-        const safeUnitAmount = isNaN(itemCents) || itemCents < 0 ? 0 : itemCents
+        // Ensure amount is valid (minimum 1 pence)
+        const safeUnitAmount = isNaN(itemPence) || itemPence < 1 ? 1 : itemPence
         
         return {
           price_data: {
-            currency: 'usd',
+            currency: 'gbp',
             product_data: {
               name: item?.product_name ?? 'Product',
               description: `${item?.product_texture ?? ''} • ${item?.product_grade ?? ''}${
@@ -275,16 +183,15 @@ export async function POST(request: NextRequest) {
         }
       }) || []
 
-    // Add shipping as a line item (integer math)
+    // Add shipping as a line item (in pence for GBP)
     if ((order?.shipping_cost_ngn ?? 0) > 0) {
       const shippingKobo = Math.round(order.shipping_cost_ngn * 100)
       const shippingPence = Math.round(shippingKobo / ngnToGbpRate)
-      const shippingCents = Math.round(shippingPence * gbpToUsdRate)
-      const safeShippingAmount = isNaN(shippingCents) || shippingCents < 0 ? 0 : shippingCents
+      const safeShippingAmount = isNaN(shippingPence) || shippingPence < 0 ? 0 : shippingPence
       
       lineItems.push({
         price_data: {
-          currency: 'usd',
+          currency: 'gbp',
           product_data: {
             name: 'Shipping',
             description: `Delivery to ${order?.shipping_country ?? 'destination'}`,
