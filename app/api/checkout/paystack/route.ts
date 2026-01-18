@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getOrder } from '@/lib/actions/checkout'
 import { createClient } from '@/lib/supabase/server'
 
-// Production fallback URL (hardcoded for safety)
-const PRODUCTION_URL = 'https://www.dehairvault.com'
-
-// Get the app URL with validation and fallback
+// Get the app URL with validation and dynamic fallback (no hardcoded URLs)
 function getAppUrl(request: NextRequest): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const productionUrl = process.env.PRODUCTION_URL // Dynamic from env
   const isProduction = process.env.NODE_ENV === 'production'
   
   // If env var is set and valid (not localhost in production), use it
@@ -18,24 +16,29 @@ function getAppUrl(request: NextRequest): string {
   // Fallback strategy for production
   if (isProduction) {
     // Try to get origin from request headers
-    const origin = request.headers.get('origin')
-    const host = request.headers.get('host')
+    const origin = request?.headers?.get('origin')
+    const host = request?.headers?.get('host')
     
     if (origin && !origin.includes('localhost')) {
-      console.warn('Using request origin as fallback:', origin)
+      console.warn('[AppUrl] Using request origin as fallback:', origin)
       return origin.replace(/\/$/, '')
     }
     
     if (host && !host.includes('localhost')) {
-      const protocol = request.headers.get('x-forwarded-proto') || 'https'
+      const protocol = request?.headers?.get('x-forwarded-proto') || 'https'
       const fallbackUrl = `${protocol}://${host}`
-      console.warn('Using request host as fallback:', fallbackUrl)
+      console.warn('[AppUrl] Using request host as fallback:', fallbackUrl)
       return fallbackUrl.replace(/\/$/, '')
     }
     
-    // Last resort: use hardcoded production URL
-    console.warn('Using hardcoded production URL as fallback:', PRODUCTION_URL)
-    return PRODUCTION_URL
+    // Use PRODUCTION_URL from env if available
+    if (productionUrl) {
+      console.warn('[AppUrl] Using PRODUCTION_URL env var:', productionUrl)
+      return productionUrl.replace(/\/$/, '')
+    }
+    
+    // Cannot determine URL - this will cause an error
+    throw new Error('Unable to determine application URL. Please set NEXT_PUBLIC_APP_URL environment variable.')
   }
   
   // Development fallback
@@ -47,8 +50,8 @@ export async function POST(request: NextRequest) {
     // Get APP_URL with fallback strategy
     const appUrl = getAppUrl(request)
     
-    const body = await request.json()
-    const { orderId, orderNumber } = body
+    const body = await request?.json()
+    const { orderId, orderNumber } = body ?? {}
 
     if (!orderId || !orderNumber) {
       return NextResponse.json(
@@ -59,39 +62,47 @@ export async function POST(request: NextRequest) {
 
     // SECURITY: Verify user owns this order
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase?.auth?.getUser() ?? { data: { user: null } }
     
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     // Fetch order details with ownership verification
-    const order = await getOrder(orderId, user.id)
+    const order = await getOrder(orderId, user?.id)
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Paystack accepts amount in kobo (multiply by 100)
-    // Validate amount is a valid number
-    if (order.total_ngn == null || isNaN(order.total_ngn) || order.total_ngn <= 0) {
-      console.error('Invalid order total for Paystack:', { total_ngn: order.total_ngn, orderId })
+    // Validate order total
+    if (order?.total_ngn == null || isNaN(order.total_ngn) || order.total_ngn <= 0) {
+      console.error('[Paystack] Invalid order total:', { total_ngn: order?.total_ngn, orderId })
       return NextResponse.json(
         { error: 'Invalid order total. Please contact support.' },
         { status: 400 }
       )
     }
     
+    // Paystack accepts amount in kobo - use INTEGER MATH to avoid rounding errors
+    // Convert NGN to kobo (smallest unit) directly
     const amountInKobo = Math.round(order.total_ngn * 100)
     
     // Final validation to prevent NaN
     if (isNaN(amountInKobo) || amountInKobo <= 0) {
-      console.error('Calculated amount is invalid:', { amountInKobo, total_ngn: order.total_ngn })
+      console.error('[Paystack] Calculated amount is invalid:', { amountInKobo, total_ngn: order.total_ngn })
       return NextResponse.json(
         { error: 'Failed to calculate payment amount' },
         { status: 400 }
       )
     }
+    
+    // Log for Vercel verification
+    console.log(`[Paystack] Order ${orderNumber} payment:`, {
+      total_ngn: order.total_ngn,
+      amountInKobo,
+      amountDisplay: `₦${(amountInKobo / 100).toFixed(2)}`
+    })
 
     // Initialize Paystack transaction
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
@@ -101,7 +112,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: order.customer_email,
+        email: order?.customer_email,
         amount: amountInKobo,
         currency: 'NGN',
         reference: `${orderNumber}-${Date.now()}`,
@@ -109,8 +120,8 @@ export async function POST(request: NextRequest) {
         metadata: {
           orderId,
           orderNumber,
-          customerName: order.customer_name,
-          customerPhone: order.customer_phone,
+          customerName: order?.customer_name,
+          customerPhone: order?.customer_phone,
           custom_fields: [
             {
               display_name: 'Order Number',

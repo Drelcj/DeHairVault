@@ -7,12 +7,92 @@ import { createClient } from '@/lib/supabase/server'
 // Note: Let Stripe SDK use its default API version for compatibility
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-// Production fallback URL (hardcoded for safety)
-const PRODUCTION_URL = 'https://www.dehairvault.com'
+// ============================================================================
+// DYNAMIC EXCHANGE RATE WITH CACHING
+// ============================================================================
 
-// Get the app URL with validation and fallback
+// Cache for exchange rate (1 hour TTL)
+interface CachedRate {
+  rate: number
+  timestamp: number
+}
+
+let cachedGbpToUsd: CachedRate | null = null
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour in milliseconds
+
+interface ExchangeRateResult {
+  success: true
+  rate: number
+  source: 'api' | 'cache'
+} | {
+  success: false
+  error: string
+}
+
+/**
+ * Fetches live GBP to USD exchange rate with 1-hour caching
+ * Returns error if API fails - no hardcoded fallbacks
+ */
+async function getLiveGbpToUsdRate(): Promise<ExchangeRateResult> {
+  const now = Date.now()
+  
+  // Check if we have a valid cached rate
+  if (cachedGbpToUsd && (now - cachedGbpToUsd.timestamp) < CACHE_TTL_MS) {
+    console.log(`[ExchangeRate] Using cached GBP→USD rate: ${cachedGbpToUsd.rate}`)
+    return { success: true, rate: cachedGbpToUsd.rate, source: 'cache' }
+  }
+  
+  try {
+    // Use Frankfurter API (free, no API key required)
+    const response = await fetch(
+      'https://api.frankfurter.app/latest?from=GBP&to=USD',
+      { 
+        next: { revalidate: 3600 }, // Next.js cache for 1 hour
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      }
+    )
+    
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}: ${response?.statusText}`)
+    }
+    
+    const data = await response?.json()
+    const rate = data?.rates?.USD
+    
+    if (typeof rate !== 'number' || isNaN(rate) || rate <= 0) {
+      throw new Error(`Invalid rate received: ${rate}`)
+    }
+    
+    // Update cache
+    cachedGbpToUsd = { rate, timestamp: now }
+    console.log(`[ExchangeRate] Fetched live GBP→USD rate: ${rate}`)
+    
+    return { success: true, rate, source: 'api' }
+  } catch (error) {
+    console.error('[ExchangeRate] Failed to fetch live rate:', error)
+    
+    // If we have an expired cache, use it as emergency fallback
+    if (cachedGbpToUsd) {
+      console.warn('[ExchangeRate] Using expired cache as emergency fallback')
+      return { success: true, rate: cachedGbpToUsd.rate, source: 'cache' }
+    }
+    
+    // No cache available - return error
+    return { 
+      success: false, 
+      error: 'Exchange rate service is temporarily unavailable. Please try again in a few moments.' 
+    }
+  }
+}
+
+// ============================================================================
+// APP URL HELPER
+// ============================================================================
+
+// Get the app URL with validation and dynamic fallback
 function getAppUrl(request: NextRequest): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const productionUrl = process.env.PRODUCTION_URL // Dynamic from env
   const isProduction = process.env.NODE_ENV === 'production'
   
   // If env var is set and valid (not localhost in production), use it
@@ -23,24 +103,29 @@ function getAppUrl(request: NextRequest): string {
   // Fallback strategy for production
   if (isProduction) {
     // Try to get origin from request headers
-    const origin = request.headers.get('origin')
-    const host = request.headers.get('host')
+    const origin = request?.headers?.get('origin')
+    const host = request?.headers?.get('host')
     
     if (origin && !origin.includes('localhost')) {
-      console.warn('Using request origin as fallback:', origin)
+      console.warn('[AppUrl] Using request origin as fallback:', origin)
       return origin.replace(/\/$/, '')
     }
     
     if (host && !host.includes('localhost')) {
-      const protocol = request.headers.get('x-forwarded-proto') || 'https'
+      const protocol = request?.headers?.get('x-forwarded-proto') || 'https'
       const fallbackUrl = `${protocol}://${host}`
-      console.warn('Using request host as fallback:', fallbackUrl)
+      console.warn('[AppUrl] Using request host as fallback:', fallbackUrl)
       return fallbackUrl.replace(/\/$/, '')
     }
     
-    // Last resort: use hardcoded production URL
-    console.warn('Using hardcoded production URL as fallback:', PRODUCTION_URL)
-    return PRODUCTION_URL
+    // Use PRODUCTION_URL from env if available
+    if (productionUrl) {
+      console.warn('[AppUrl] Using PRODUCTION_URL env var:', productionUrl)
+      return productionUrl.replace(/\/$/, '')
+    }
+    
+    // Cannot determine URL - this will cause an error
+    throw new Error('Unable to determine application URL. Please set NEXT_PUBLIC_APP_URL environment variable.')
   }
   
   // Development fallback
@@ -86,48 +171,78 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Get exchange rate from database for USD
-    const exchangeRates = await getExchangeRates()
-    const usdRate = exchangeRates.find((rate) => rate.currency_code === 'USD')
-    
-    if (!usdRate || !usdRate.rate_from_gbp) {
-      console.error('USD exchange rate not found or invalid:', usdRate)
-      return NextResponse.json(
-        { error: 'USD exchange rate not configured' },
-        { status: 500 }
-      )
-    }
-
     // Validate order total
-    if (order.total_ngn == null || isNaN(order.total_ngn) || order.total_ngn <= 0) {
-      console.error('Invalid order total for Stripe:', { total_ngn: order.total_ngn, orderId })
+    if (order?.total_ngn == null || isNaN(order.total_ngn) || order.total_ngn <= 0) {
+      console.error('Invalid order total for Stripe:', { total_ngn: order?.total_ngn, orderId })
       return NextResponse.json(
         { error: 'Invalid order total. Please contact support.' },
         { status: 400 }
       )
     }
 
-    // Convert NGN to USD:
-    // rate_from_gbp for USD tells us how many USD = 1 GBP
-    // rate_from_gbp for NGN tells us how many NGN = 1 GBP
-    // So: USD = NGN * (USD_rate / NGN_rate)
-    // We need the NGN rate from the database as well
-    const ngnRate = exchangeRates.find((rate) => rate.currency_code === 'NGN')
-    const ngnToGbpRate = ngnRate?.rate_from_gbp || 1950 // NGN per 1 GBP (fallback)
-    const usdToGbpRate = usdRate.rate_from_gbp // USD per 1 GBP (e.g., 1.27)
+    // ========================================================================
+    // CURRENCY CONVERSION: NGN -> GBP -> USD (with live rate, integer math)
+    // ========================================================================
     
-    // Convert: NGN -> GBP -> USD
-    // GBP = NGN / ngnToGbpRate
-    // USD = GBP * usdToGbpRate
-    const amountInUSD = (order.total_ngn / ngnToGbpRate) * usdToGbpRate
+    // Get NGN to GBP rate from database (with optional chaining)
+    const exchangeRates = await getExchangeRates()
+    const ngnRate = exchangeRates?.find((rate) => rate?.currency_code === 'NGN')
     
-    // Validate USD amount
-    if (isNaN(amountInUSD) || amountInUSD <= 0) {
-      console.error('Invalid USD amount calculated:', { 
+    if (!ngnRate?.rate_from_gbp) {
+      console.error('[Stripe] NGN exchange rate not found in database')
+      return NextResponse.json(
+        { error: 'Currency configuration error. Please contact support.' },
+        { status: 500 }
+      )
+    }
+    
+    const ngnToGbpRate = ngnRate.rate_from_gbp
+    
+    // Get LIVE GBP to USD rate (cached for 1 hour) - NO HARDCODED FALLBACK
+    const rateResult = await getLiveGbpToUsdRate()
+    
+    if (!rateResult.success) {
+      console.error('[Stripe] Exchange rate API unavailable:', rateResult.error)
+      return NextResponse.json(
+        { error: rateResult.error },
+        { status: 503 } // Service Unavailable
+      )
+    }
+    
+    const gbpToUsdRate = rateResult.rate
+    
+    // Convert using INTEGER MATH to avoid floating point errors
+    // Work in smallest units: kobo (NGN) -> pence (GBP) -> cents (USD)
+    const totalKobo = Math.round(order.total_ngn * 100) // Convert NGN to kobo
+    const totalPence = Math.round(totalKobo / ngnToGbpRate) // Convert kobo to pence
+    const totalCents = Math.round(totalPence * gbpToUsdRate) // Convert pence to cents
+    
+    // For display/logging only
+    const amountInGBP = totalPence / 100
+    const amountInUSD = totalCents / 100
+    
+    // Log for Vercel verification
+    console.log(`[Stripe] Order ${orderNumber} conversion:`, {
+      total_ngn: order.total_ngn,
+      totalKobo,
+      ngnToGbpRate,
+      totalPence,
+      amountInGBP: amountInGBP.toFixed(2),
+      gbpToUsdRate,
+      rateSource: rateResult.source,
+      totalCents,
+      amountInUSD: amountInUSD.toFixed(2)
+    })
+    console.log(`[Stripe] Stripe Charge (USD): $${amountInUSD.toFixed(2)}`)
+    
+    // Validate amounts
+    if (totalCents <= 0 || isNaN(totalCents)) {
+      console.error('[Stripe] Invalid USD amount calculated:', { 
         total_ngn: order.total_ngn, 
+        totalKobo,
         ngnToGbpRate, 
-        usdToGbpRate, 
-        amountInUSD 
+        gbpToUsdRate,
+        totalCents
       })
       return NextResponse.json(
         { error: 'Failed to calculate payment amount' },
@@ -135,38 +250,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create line items from order items with proper currency conversion
+    // Create line items from order items with INTEGER MATH to avoid rounding errors
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
-      order.order_items?.map((item: any) => {
-        // Convert item price: NGN -> GBP -> USD
-        const itemPriceUSD = (item.unit_price_ngn / ngnToGbpRate) * usdToGbpRate
-        const unitAmountCents = Math.round(itemPriceUSD * 100)
+      order?.order_items?.map((item: any) => {
+        // Convert item price: kobo -> pence -> cents (integer math)
+        const itemKobo = Math.round((item?.unit_price_ngn ?? 0) * 100)
+        const itemPence = Math.round(itemKobo / ngnToGbpRate)
+        const itemCents = Math.round(itemPence * gbpToUsdRate)
         
-        // Ensure amount is valid (fallback to 0 which will show as error)
-        const safeUnitAmount = isNaN(unitAmountCents) || unitAmountCents < 0 ? 0 : unitAmountCents
+        // Ensure amount is valid
+        const safeUnitAmount = isNaN(itemCents) || itemCents < 0 ? 0 : itemCents
         
         return {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: item.product_name,
-              description: `${item.product_texture} • ${item.product_grade}${
-                item.selected_length ? ` • ${item.selected_length}"` : ''
-              }`,
-              images: item.product_snapshot?.images?.[0]
+              name: item?.product_name ?? 'Product',
+              description: `${item?.product_texture ?? ''} • ${item?.product_grade ?? ''}${
+                item?.selected_length ? ` • ${item.selected_length}"` : ''
+              }`.trim(),
+              images: item?.product_snapshot?.images?.[0]
                 ? [item.product_snapshot.images[0]]
                 : [],
             },
             unit_amount: safeUnitAmount,
           },
-          quantity: item.quantity,
+          quantity: item?.quantity ?? 1,
         }
       }) || []
 
-    // Add shipping as a line item
-    if (order.shipping_cost_ngn > 0) {
-      const shippingUSD = (order.shipping_cost_ngn / ngnToGbpRate) * usdToGbpRate
-      const shippingCents = Math.round(shippingUSD * 100)
+    // Add shipping as a line item (integer math)
+    if ((order?.shipping_cost_ngn ?? 0) > 0) {
+      const shippingKobo = Math.round(order.shipping_cost_ngn * 100)
+      const shippingPence = Math.round(shippingKobo / ngnToGbpRate)
+      const shippingCents = Math.round(shippingPence * gbpToUsdRate)
       const safeShippingAmount = isNaN(shippingCents) || shippingCents < 0 ? 0 : shippingCents
       
       lineItems.push({
@@ -174,7 +291,7 @@ export async function POST(request: NextRequest) {
           currency: 'usd',
           product_data: {
             name: 'Shipping',
-            description: `Delivery to ${order.shipping_country}`,
+            description: `Delivery to ${order?.shipping_country ?? 'destination'}`,
           },
           unit_amount: safeShippingAmount,
         },
@@ -186,8 +303,6 @@ export async function POST(request: NextRequest) {
     // For now, we apply the discount by reducing the product prices proportionally
     // or the discount is already reflected in the order total
     // TODO: Implement Stripe Coupon integration for proper discount display
-
-    console.log('Creating Stripe session for order:', orderNumber, 'Amount USD:', amountInUSD.toFixed(2))
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
