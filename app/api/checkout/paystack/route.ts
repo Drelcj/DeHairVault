@@ -2,8 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getOrder } from '@/lib/actions/checkout'
 import { createClient } from '@/lib/supabase/server'
 
+// Get the app URL with validation
+function getAppUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  
+  if (!appUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL is not configured')
+  }
+  
+  // In production, ensure we're not using localhost
+  if (process.env.NODE_ENV === 'production' && appUrl.includes('localhost')) {
+    throw new Error('NEXT_PUBLIC_APP_URL cannot be localhost in production')
+  }
+  
+  // Remove trailing slash if present
+  return appUrl.replace(/\/$/, '')
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Validate APP_URL is configured
+    const appUrl = getAppUrl()
+    
     const body = await request.json()
     const { orderId, orderNumber } = body
 
@@ -30,7 +50,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Paystack accepts amount in kobo (multiply by 100)
+    // Validate amount is a valid number
+    if (order.total_ngn == null || isNaN(order.total_ngn) || order.total_ngn <= 0) {
+      console.error('Invalid order total for Paystack:', { total_ngn: order.total_ngn, orderId })
+      return NextResponse.json(
+        { error: 'Invalid order total. Please contact support.' },
+        { status: 400 }
+      )
+    }
+    
     const amountInKobo = Math.round(order.total_ngn * 100)
+    
+    // Final validation to prevent NaN
+    if (isNaN(amountInKobo) || amountInKobo <= 0) {
+      console.error('Calculated amount is invalid:', { amountInKobo, total_ngn: order.total_ngn })
+      return NextResponse.json(
+        { error: 'Failed to calculate payment amount' },
+        { status: 400 }
+      )
+    }
 
     // Initialize Paystack transaction
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
@@ -44,7 +82,7 @@ export async function POST(request: NextRequest) {
         amount: amountInKobo,
         currency: 'NGN',
         reference: `${orderNumber}-${Date.now()}`,
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?order_number=${orderNumber}`,
+        callback_url: `${appUrl}/checkout/success?order_number=${orderNumber}`,
         metadata: {
           orderId,
           orderNumber,
