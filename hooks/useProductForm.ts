@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { generateProductSlug } from '@/lib/utils/product'
 import type { ProductFormValues, ProductVariantInput } from '@/types/admin'
-import { HairCategory, HairGrade, HairOrigin, HairTexture } from '@/types/database.types'
+import { HairCategory } from '@/types/database.types'
 
 const defaultValues: ProductFormValues = {
   name: '',
@@ -12,8 +12,8 @@ const defaultValues: ProductFormValues = {
   short_description: '',
   features: [],  // Product features/highlights
   grade: null,  // N/A by default
-  origin: HairOrigin.VIETNAM,
-  texture: 'STRAIGHT',  // Default texture as string
+  origin: 'VIETNAM', // String value for dynamic support
+  texture: 'STRAIGHT',  // String value for dynamic support
   category: HairCategory.BUNDLES,
   draw_type: null,
   available_lengths: [14, 16, 18],

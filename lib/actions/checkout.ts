@@ -218,6 +218,7 @@ export async function createOrder(
     }
 
     // Insert order items - validate product data exists
+    // DEFENSIVE: Accept any string for texture/grade/origin (validated at product creation, not here)
     const orderItems: OrderItemInsert[] = []
     for (const item of cart.items) {
       // Ensure product data exists
@@ -227,14 +228,28 @@ export async function createOrder(
         return { success: false, error: 'Product data missing for one or more cart items' }
       }
 
+      // Safely extract product attributes with fallbacks
+      const productName = item.product.name || 'Unknown Product'
+      const productGrade = item.product.grade || null // Nullable - some products don't have grades
+      const productTexture = item.product.texture || 'UNKNOWN' // Should always exist, fallback just in case
+      const productOrigin = item.product.origin || 'UNKNOWN' // Should always exist, fallback just in case
+
+      // Log if we encounter unexpected missing data (for monitoring)
+      if (!item.product.texture) {
+        console.warn(`[Checkout] Product ${item.product_id} has no texture defined`)
+      }
+      if (!item.product.origin) {
+        console.warn(`[Checkout] Product ${item.product_id} has no origin defined`)
+      }
+
       orderItems.push({
         order_id: (order as any).id,
         product_id: item.product_id,
         variant_id: item.variant_id || null,
-        product_name: item.product.name,
-        product_grade: item.product.grade,
-        product_texture: item.product.texture,
-        product_origin: item.product.origin,
+        product_name: productName,
+        product_grade: productGrade, // Now accepts any string or null
+        product_texture: productTexture, // Now accepts any string (TEXT column)
+        product_origin: productOrigin, // Now accepts any string (TEXT column)
         selected_length: item.selected_length,
         quantity: item.quantity,
         unit_price_ngn: item.unit_price_ngn,

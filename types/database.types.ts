@@ -4,34 +4,48 @@
 // ENUMS
 // ============================================================================
 
-export enum HairGrade {
-  GRADE_A = 'GRADE_A', // Raw Baby
-  GRADE_B = 'GRADE_B', // Single Donor
-  GRADE_C = 'GRADE_C', // VIP Virgin
-  GRADE_D = 'GRADE_D', // Regular Virgin/Remy
-  GRADE_E = 'GRADE_E', // Raw Hair
-}
+// Known hair grades (kept for type hints, but any string is allowed)
+export const KNOWN_HAIR_GRADES = [
+  'GRADE_A', // Raw Baby
+  'GRADE_B', // Single Donor
+  'GRADE_C', // VIP Virgin
+  'GRADE_D', // Regular Virgin/Remy
+  'GRADE_E', // Raw Hair
+] as const;
 
-export enum HairTexture {
-  STRAIGHT = 'STRAIGHT',
-  BODY_WAVE = 'BODY_WAVE',
-  LOOSE_WAVE = 'LOOSE_WAVE',
-  DEEP_WAVE = 'DEEP_WAVE',
-  WATER_WAVE = 'WATER_WAVE',
-  KINKY_CURLY = 'KINKY_CURLY',
-  JERRY_CURL = 'JERRY_CURL',
-  LOOSE_DEEP = 'LOOSE_DEEP',
-  NATURAL_WAVE = 'NATURAL_WAVE',
-}
+// HairGrade is now a string to support dynamic admin-created grades
+export type HairGrade = string | null;
 
-export enum HairOrigin {
-  VIETNAM = 'VIETNAM',
-  PHILIPPINES = 'PHILIPPINES',
-  INDIA = 'INDIA',
-  BURMA = 'BURMA',
-  CAMBODIA = 'CAMBODIA',
-  CHINA = 'CHINA',
-}
+// Known hair textures (kept for type hints, but any string is allowed)
+export const KNOWN_HAIR_TEXTURES = [
+  'STRAIGHT',
+  'BODY_WAVE',
+  'LOOSE_WAVE',
+  'DEEP_WAVE',
+  'WATER_WAVE',
+  'KINKY_CURLY',
+  'JERRY_CURL',
+  'LOOSE_DEEP',
+  'NATURAL_WAVE',
+  'PIXIE_CURLS',
+  'BONE_STRAIGHT',
+] as const;
+
+// HairTexture is now a string to support dynamic admin-created textures
+export type HairTexture = string;
+
+// Known hair origins (kept for type hints, but any string is allowed)
+export const KNOWN_HAIR_ORIGINS = [
+  'VIETNAM',
+  'PHILIPPINES',
+  'INDIA',
+  'BURMA',
+  'CAMBODIA',
+  'CHINA',
+] as const;
+
+// HairOrigin is now a string to support dynamic admin-created origins
+export type HairOrigin = string;
 
 export enum HairCategory {
   BUNDLES = 'BUNDLES',
@@ -216,9 +230,9 @@ export interface OrderItem {
   product_id: string | null;
   variant_id: string | null;
   product_name: string;
-  product_grade: HairGrade;
-  product_texture: HairTexture;
-  product_origin: HairOrigin;
+  product_grade: string | null; // TEXT in database, nullable
+  product_texture: string; // TEXT in database for dynamic textures
+  product_origin: string; // TEXT in database for dynamic origins
   selected_length: number | null;
   quantity: number;
   unit_price_ngn: number;
