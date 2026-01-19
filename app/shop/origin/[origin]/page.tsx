@@ -5,38 +5,37 @@ import { Footer } from '@/components/footer'
 import { ProductGrid } from '@/components/product-grid'
 import { OriginNavigationCards } from '@/components/origin-navigation-cards'
 import { getProductsByOrigin, getOriginProductImages } from '@/lib/actions/origin'
-import { HairOrigin } from '@/types/database.types'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 
-// Map slugs to HairOrigin enum
-const originSlugMap: Record<string, HairOrigin> = {
-  china: HairOrigin.CHINA,
-  vietnam: HairOrigin.VIETNAM,
-  cambodia: HairOrigin.CAMBODIA,
-  burma: HairOrigin.BURMA,
-  philippines: HairOrigin.PHILIPPINES,
-  india: HairOrigin.INDIA,
+// Map slugs to origin values (string type for dynamic support)
+const originSlugMap: Record<string, string> = {
+  china: 'CHINA',
+  vietnam: 'VIETNAM',
+  cambodia: 'CAMBODIA',
+  burma: 'BURMA',
+  philippines: 'PHILIPPINES',
+  india: 'INDIA',
 }
 
 // Map origins to display names
-const originDisplayNames: Record<HairOrigin, string> = {
-  [HairOrigin.CHINA]: 'Chinese',
-  [HairOrigin.VIETNAM]: 'Vietnamese',
-  [HairOrigin.CAMBODIA]: 'Cambodian',
-  [HairOrigin.BURMA]: 'Burmese',
-  [HairOrigin.PHILIPPINES]: 'Filipino',
-  [HairOrigin.INDIA]: 'Indian',
+const originDisplayNames: Record<string, string> = {
+  'CHINA': 'Chinese',
+  'VIETNAM': 'Vietnamese',
+  'CAMBODIA': 'Cambodian',
+  'BURMA': 'Burmese',
+  'PHILIPPINES': 'Filipino',
+  'INDIA': 'Indian',
 }
 
 // Map origins to descriptions
-const originDescriptions: Record<HairOrigin, string> = {
-  [HairOrigin.CHINA]: 'Discover our collection of silky and versatile Chinese hair extensions, known for their smooth texture and easy styling.',
-  [HairOrigin.VIETNAM]: 'Explore thick and lustrous Vietnamese hair, prized for its durability and natural shine.',
-  [HairOrigin.CAMBODIA]: 'Shop natural and soft Cambodian hair extensions, perfect for a seamless, authentic look.',
-  [HairOrigin.BURMA]: 'Experience raw and premium Burmese hair, sourced from the finest quality donors.',
-  [HairOrigin.PHILIPPINES]: 'Browse smooth and durable Filipino hair extensions, ideal for lasting wear.',
-  [HairOrigin.INDIA]: 'Find classic and reliable Indian hair, a timeless choice for all hair types.',
+const originDescriptions: Record<string, string> = {
+  'CHINA': 'Discover our collection of silky and versatile Chinese hair extensions, known for their smooth texture and easy styling.',
+  'VIETNAM': 'Explore thick and lustrous Vietnamese hair, prized for its durability and natural shine.',
+  'CAMBODIA': 'Shop natural and soft Cambodian hair extensions, perfect for a seamless, authentic look.',
+  'BURMA': 'Experience raw and premium Burmese hair, sourced from the finest quality donors.',
+  'PHILIPPINES': 'Browse smooth and durable Filipino hair extensions, ideal for lasting wear.',
+  'INDIA': 'Find classic and reliable Indian hair, a timeless choice for all hair types.',
 }
 
 interface OriginPageProps {

@@ -2,11 +2,10 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { HairOrigin } from '@/types/database.types'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 
 interface OriginCard {
-  origin: HairOrigin
+  origin: string
   label: string
   slug: string
   description: string
@@ -14,37 +13,37 @@ interface OriginCard {
 
 const originCards: OriginCard[] = [
   {
-    origin: HairOrigin.CHINA,
+    origin: 'CHINA',
     label: 'Chinese',
     slug: 'china',
     description: 'Silky & Versatile',
   },
   {
-    origin: HairOrigin.VIETNAM,
+    origin: 'VIETNAM',
     label: 'Vietnamese',
     slug: 'vietnam',
     description: 'Thick & Lustrous',
   },
   {
-    origin: HairOrigin.CAMBODIA,
+    origin: 'CAMBODIA',
     label: 'Cambodian',
     slug: 'cambodia',
     description: 'Natural & Soft',
   },
   {
-    origin: HairOrigin.BURMA,
+    origin: 'BURMA',
     label: 'Burmese',
     slug: 'burma',
     description: 'Raw & Premium',
   },
   {
-    origin: HairOrigin.PHILIPPINES,
+    origin: 'PHILIPPINES',
     label: 'Filipino',
     slug: 'philippines',
     description: 'Smooth & Durable',
   },
   {
-    origin: HairOrigin.INDIA,
+    origin: 'INDIA',
     label: 'Indian',
     slug: 'india',
     description: 'Classic & Reliable',
@@ -56,8 +55,8 @@ export { originCards }
 export type { OriginCard }
 
 interface OriginNavigationCardsProps {
-  originImages?: Record<HairOrigin, string[]>
-  currentOrigin?: HairOrigin | null
+  originImages?: Record<string, string[]>
+  currentOrigin?: string | null
   showTitle?: boolean
   compact?: boolean
 }

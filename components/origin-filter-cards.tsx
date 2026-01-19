@@ -3,10 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
-import { HairOrigin } from '@/types/database.types'
 
 interface OriginCard {
-  origin: HairOrigin
+  origin: string
   label: string
   image: string
   description: string
@@ -14,37 +13,37 @@ interface OriginCard {
 
 const originCards: OriginCard[] = [
   {
-    origin: HairOrigin.CHINA,
+    origin: 'CHINA',
     label: 'Chinese',
     image: '/origins/china.jpg',
     description: 'Silky & Versatile',
   },
   {
-    origin: HairOrigin.VIETNAM,
+    origin: 'VIETNAM',
     label: 'Vietnamese',
     image: '/origins/vietnam.jpg',
     description: 'Thick & Lustrous',
   },
   {
-    origin: HairOrigin.CAMBODIA,
+    origin: 'CAMBODIA',
     label: 'Cambodian',
     image: '/origins/cambodia.jpg',
     description: 'Natural & Soft',
   },
   {
-    origin: HairOrigin.BURMA,
+    origin: 'BURMA',
     label: 'Burmese',
     image: '/origins/burma.jpg',
     description: 'Raw & Premium',
   },
   {
-    origin: HairOrigin.PHILIPPINES,
+    origin: 'PHILIPPINES',
     label: 'Filipino',
     image: '/origins/philippines.jpg',
     description: 'Smooth & Durable',
   },
   {
-    origin: HairOrigin.INDIA,
+    origin: 'INDIA',
     label: 'Indian',
     image: '/origins/india.jpg',
     description: 'Classic & Reliable',
@@ -52,8 +51,8 @@ const originCards: OriginCard[] = [
 ]
 
 interface OriginFilterCardsProps {
-  selectedOrigin: HairOrigin | null
-  onOriginChange: (origin: HairOrigin | null) => void
+  selectedOrigin: string | null
+  onOriginChange: (origin: string | null) => void
 }
 
 export function OriginFilterCards({ selectedOrigin, onOriginChange }: OriginFilterCardsProps) {

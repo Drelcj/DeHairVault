@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { HairTexture, HairCategory } from "@/types/database.types"
+import { HairCategory } from "@/types/database.types"
 import { useCurrency } from "@/contexts/currency-context"
 import type { FilterState } from "./shop-content-client"
 
@@ -18,7 +18,7 @@ interface ShopSidebarProps {
   maxPrice: number
 }
 
-// Map database enum values to display labels
+// Map database values to display labels
 const categoryOptions: { value: HairCategory; label: string }[] = [
   { value: HairCategory.BUNDLES, label: "Bundles" },
   { value: HairCategory.CLOSURE, label: "Closures" },
@@ -28,16 +28,19 @@ const categoryOptions: { value: HairCategory; label: string }[] = [
   { value: HairCategory.CLIP_INS, label: "Clip-Ins" },
 ]
 
-const textureOptions: { value: HairTexture; label: string }[] = [
-  { value: HairTexture.STRAIGHT, label: "Straight" },
-  { value: HairTexture.BODY_WAVE, label: "Body Wave" },
-  { value: HairTexture.LOOSE_WAVE, label: "Loose Wave" },
-  { value: HairTexture.DEEP_WAVE, label: "Deep Wave" },
-  { value: HairTexture.WATER_WAVE, label: "Water Wave" },
-  { value: HairTexture.KINKY_CURLY, label: "Kinky Curly" },
-  { value: HairTexture.JERRY_CURL, label: "Jerry Curl" },
-  { value: HairTexture.LOOSE_DEEP, label: "Loose Deep" },
-  { value: HairTexture.NATURAL_WAVE, label: "Natural Wave" },
+// Texture options use string values for dynamic texture support
+const textureOptions: { value: string; label: string }[] = [
+  { value: 'STRAIGHT', label: "Straight" },
+  { value: 'BODY_WAVE', label: "Body Wave" },
+  { value: 'LOOSE_WAVE', label: "Loose Wave" },
+  { value: 'DEEP_WAVE', label: "Deep Wave" },
+  { value: 'WATER_WAVE', label: "Water Wave" },
+  { value: 'KINKY_CURLY', label: "Kinky Curly" },
+  { value: 'JERRY_CURL', label: "Jerry Curl" },
+  { value: 'LOOSE_DEEP', label: "Loose Deep" },
+  { value: 'NATURAL_WAVE', label: "Natural Wave" },
+  { value: 'PIXIE_CURLS', label: "Pixie Curls" },
+  { value: 'BONE_STRAIGHT', label: "Bone Straight" },
 ]
 
 const lengthOptions = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
@@ -62,7 +65,7 @@ export function ShopSidebar({ filters, setFilters, minPrice, maxPrice }: ShopSid
     router.push(`/shop${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
   }
 
-  const handleTextureChange = (texture: HairTexture, checked: boolean) => {
+  const handleTextureChange = (texture: string, checked: boolean) => {
     setFilters((prev) => ({
       ...prev,
       textures: checked ? [...prev.textures, texture] : prev.textures.filter((t) => t !== texture),
