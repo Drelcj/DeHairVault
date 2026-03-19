@@ -53,6 +53,7 @@ export default async function AdminProductEditPage({ params }: PageProps) {
     slug: product.slug,
     description: product.description,
     short_description: product.short_description,
+    features: product.features || [],
     grade: product.grade,
     origin: product.origin,
     texture: product.texture,
