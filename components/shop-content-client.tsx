@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation"
 import { ShopSidebar } from "./shop-sidebar"
 import { ProductGrid } from "./product-grid"
 import { ShopToolbar } from "./shop-toolbar"
-import { OriginNavigationCards } from "./origin-navigation-cards"
 import { SlidersHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -13,7 +12,6 @@ import type { Product, HairTexture, HairCategory, HairOrigin } from "@/types/dat
 
 export interface FilterState {
   category: HairCategory | null
-  origin: HairOrigin | null
   textures: HairTexture[]
   lengths: number[]
   priceRange: [number, number]
@@ -23,19 +21,16 @@ interface ShopContentClientProps {
   initialProducts: Product[]
   minPrice: number
   maxPrice: number
-  originImages?: Record<HairOrigin, string[]>
 }
 
-export function ShopContentClient({ initialProducts, minPrice, maxPrice, originImages = {} as Record<HairOrigin, string[]> }: ShopContentClientProps) {
+export function ShopContentClient({ initialProducts, minPrice, maxPrice }: ShopContentClientProps) {
   const searchParams = useSearchParams()
   
   // Get category and origin from URL query params
   const categoryParam = searchParams.get("category")?.toUpperCase() as HairCategory | null
-  const originParam = searchParams.get("origin")?.toUpperCase() as HairOrigin | null
-  
+
   const [filters, setFilters] = useState<FilterState>({
     category: categoryParam || null,
-    origin: originParam || null,
     textures: [],
     lengths: [],
     priceRange: [minPrice, maxPrice],
@@ -44,11 +39,9 @@ export function ShopContentClient({ initialProducts, minPrice, maxPrice, originI
   // Update filters when URL changes
   useEffect(() => {
     const newCategory = searchParams.get("category")?.toUpperCase() as HairCategory | null
-    const newOrigin = searchParams.get("origin")?.toUpperCase() as HairOrigin | null
-    setFilters(prev => ({ 
-      ...prev, 
+    setFilters(prev => ({
+      ...prev,
       category: newCategory || null,
-      origin: newOrigin || null
     }))
   }, [searchParams])
   const [sortBy, setSortBy] = useState("featured")
@@ -60,11 +53,6 @@ export function ShopContentClient({ initialProducts, minPrice, maxPrice, originI
     // Apply category filter
     if (filters.category) {
       result = result.filter((p) => p.category === filters.category)
-    }
-
-    // Apply origin filter
-    if (filters.origin) {
-      result = result.filter((p) => p.origin === filters.origin)
     }
 
     // Apply texture filter
@@ -104,7 +92,6 @@ export function ShopContentClient({ initialProducts, minPrice, maxPrice, originI
 
   const activeFilterCount =
     (filters.category ? 1 : 0) +
-    (filters.origin ? 1 : 0) +
     filters.textures.length +
     filters.lengths.length +
     (filters.priceRange[0] > minPrice || filters.priceRange[1] < maxPrice ? 1 : 0)
@@ -112,9 +99,6 @@ export function ShopContentClient({ initialProducts, minPrice, maxPrice, originI
   return (
     <section className="pb-24">
       <div className="container mx-auto px-6 lg:px-12">
-        {/* Origin Navigation Cards */}
-        <OriginNavigationCards originImages={originImages} />
-
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
           <div className="flex items-center gap-4">

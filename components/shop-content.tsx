@@ -1,13 +1,9 @@
 import { getProducts } from "@/lib/actions/products"
-import { getOriginProductImages } from "@/lib/actions/origin"
 import { ShopContentClient } from "./shop-content-client"
 
 export async function ShopContent() {
-  // Fetch all active products and origin images in parallel
-  const [products, originImages] = await Promise.all([
-    getProducts({ isActive: true }),
-    getOriginProductImages(),
-  ])
+  // Fetch all active products in parallel
+  const products = await getProducts({ isActive: true })
 
   // Calculate min and max prices for the price range filter (in GBP)
   const prices = products.map(p => p.base_price_gbp)
@@ -19,7 +15,6 @@ export async function ShopContent() {
       initialProducts={products} 
       minPrice={minPrice} 
       maxPrice={maxPrice}
-      originImages={originImages}
     />
   )
 }

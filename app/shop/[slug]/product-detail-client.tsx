@@ -552,10 +552,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <h3 className="text-lg font-medium text-foreground mb-3">Specifications</h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-muted-foreground">Origin:</span>
-                <span className="font-medium">{product.origin}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-border">
                 <span className="text-muted-foreground">Grade:</span>
                 <span className="font-medium">{product.grade || 'N/A'}</span>
               </div>
