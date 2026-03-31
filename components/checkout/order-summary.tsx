@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import { Truck, Info } from 'lucide-react'
 import { useCurrency } from '@/contexts/currency-context'
 import { formatNGN, formatGBP } from '@/lib/utils/currency'
+import { getProductImageSources } from '@/lib/utils'
 import type { CartWithItems } from '@/lib/actions/cart'
 
 interface OrderSummaryProps {
@@ -15,6 +17,35 @@ interface OrderSummaryProps {
   exchangeRate: number
   couponCode?: string
   onRemoveCoupon?: () => void
+}
+
+function CartProductImage({ product, quantity }: { product: CartWithItems['items'][0]['product']; quantity: number }) {
+  const sources = getProductImageSources(product)
+  const [imageIndex, setImageIndex] = useState(0)
+  const currentImage = sources[imageIndex] ?? ''
+
+  return (
+    <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border">
+      {currentImage ? (
+        <Image
+          src={currentImage}
+          alt={product.name}
+          fill
+          className="object-cover"
+          onError={() => {
+            setImageIndex((prev) => Math.min(prev + 1, sources.length - 1))
+          }}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+          No image
+        </div>
+      )}
+      <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs text-accent-foreground font-medium">
+        {quantity}
+      </div>
+    </div>
+  )
 }
 
 export function OrderSummary({
@@ -44,17 +75,7 @@ export function OrderSummary({
       <div className="mt-6 space-y-4">
         {cart.items.map((item) => (
           <div key={item.id} className="flex gap-4">
-            <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border">
-              <Image
-                src={item.product.thumbnail_url || item.product.images[0] || '/placeholder.png'}
-                alt={item.product.name}
-                fill
-                className="object-cover"
-              />
-              <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs text-accent-foreground font-medium">
-                {item.quantity}
-              </div>
-            </div>
+            <CartProductImage product={item.product} quantity={item.quantity} />
             <div className="flex-1">
               <h4 className="font-medium text-foreground">{item.product.name}</h4>
               <p className="text-sm text-muted-foreground">

@@ -9,6 +9,7 @@ import { removeFromCart, updateCartItemQuantity } from '@/lib/actions/cart'
 import { useCart } from '@/contexts/cart-context'
 import { useCurrency } from '@/contexts/currency-context'
 import { toast } from 'sonner'
+import { getProductImageSources } from '@/lib/utils'
 import type { CartItemWithProduct } from '@/lib/actions/cart'
 
 interface CartItemProps {
@@ -75,7 +76,10 @@ export function CartItem({ item }: CartItemProps) {
     }
   }
 
-  const imageUrl = item.product.thumbnail_url || item.product.images?.[0] || '/placeholder.jpg'
+  const sources = getProductImageSources(item.product)
+  const [imageIndex, setImageIndex] = useState(0)
+  const currentImage = sources[imageIndex] ?? ''
+
   // Use current product price instead of stored price to reflect any price updates
   const currentUnitPrice = item.product.base_price_gbp
   const totalPrice = currentUnitPrice * item.quantity
@@ -88,13 +92,25 @@ export function CartItem({ item }: CartItemProps) {
         href={productUrl}
         className="relative w-20 h-20 rounded-lg overflow-hidden bg-secondary flex-shrink-0 hover:opacity-80 transition-opacity"
       >
+{currentImage ? (
         <Image
-          src={imageUrl}
+          src={currentImage}
           alt={item.product.name}
           fill
           className="object-cover"
           sizes="80px"
+          onError={() => {
+            setImageIndex((prev) => {
+              if (prev + 1 < sources.length) {
+                return prev + 1
+              }
+              return prev
+            })
+          }}
         />
+      ) : (
+        <div className="flex items-center justify-center text-xs text-muted-foreground">No image</div>
+      )}
       </Link>
 
       {/* Product Details */}
