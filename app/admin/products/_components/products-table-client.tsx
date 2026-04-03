@@ -63,7 +63,8 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
   return (
     <>
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
@@ -89,8 +90,8 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {product.images?.[0] ? (
-                          <img 
-                            src={product.images[0]} 
+                          <img
+                            src={product.images[0]}
                             alt={product.name}
                             className="h-10 w-10 rounded-lg object-cover"
                           />
@@ -105,34 +106,34 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {product.category}
-                    </td>
-                    <td className="px-6 py-4 font-medium">
-                      {formatPrice(Number(product.base_price_gbp || 0), 'GBP')}
-                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">{product.category}</td>
+                    <td className="px-6 py-4 font-medium">{formatPrice(Number(product.base_price_gbp || 0), 'GBP')}</td>
                     <td className="px-6 py-4">
-                      <span className={`font-medium ${
-                        product.stock_quantity === 0 
-                          ? 'text-red-600 dark:text-red-400' 
-                          : product.stock_quantity <= 10
+                      <span
+                        className={`font-medium ${
+                          product.stock_quantity === 0
+                            ? 'text-red-600 dark:text-red-400'
+                            : product.stock_quantity <= 10
                             ? 'text-yellow-600 dark:text-yellow-400'
                             : 'text-foreground'
-                      }`}>
+                        }`}
+                      >
                         {product.stock_quantity}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-                        product.is_active 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                      }`}>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                          product.is_active
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                        }`}
+                      >
                         {product.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Link
                           href={`/admin/products/${product.id}/edit`}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
@@ -155,6 +156,71 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden p-4 space-y-3">
+          {products.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
+              <p className="mt-4 text-muted-foreground">No products found</p>
+            </div>
+          ) : (
+            products.map((product) => (
+              <article key={product.id} className="rounded-lg border border-border bg-background p-4">
+                <div className="flex items-start gap-3">
+                  {product.images?.[0] ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="h-12 w-12 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                      <Package className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-semibold text-foreground truncate">{product.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{product.slug}</p>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <span>{product.category}</span>
+                      <span>{formatPrice(Number(product.base_price_gbp || 0), 'GBP')}</span>
+                      <span>Stock: {product.stock_quantity}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                      product.is_active
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                    }`}
+                  >
+                    {product.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    href={`/admin/products/${product.id}/edit`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors w-full justify-center"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteClick(product)}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50 w-full justify-center"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </div>
 

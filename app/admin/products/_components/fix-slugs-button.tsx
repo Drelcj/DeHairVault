@@ -11,7 +11,11 @@ import { fixAllProductSlugsAction } from '../actions'
  * This normalizes legacy slugs (mixed case, spaces) to URL-safe format.
  * Remove this component after migration is complete.
  */
-export function FixSlugsButton() {
+type FixSlugsButtonProps = {
+  className?: string
+}
+
+export function FixSlugsButton({ className }: FixSlugsButtonProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -47,7 +51,7 @@ export function FixSlugsButton() {
     <button
       onClick={handleFixSlugs}
       disabled={isPending}
-      className="inline-flex items-center gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className={`inline-flex items-center gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className ?? ''}`.trim()}
       title="Normalize all product slugs for URL compatibility"
     >
       {isPending ? (
