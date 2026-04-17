@@ -126,8 +126,12 @@ export async function createOrder(
       }
     }
     
-    // Use the cart's exchange rate for consistency, or fall back to form data
-    const exchangeRate = cart.exchangeRate || formData.exchangeRate || 1950
+    // Use the cart's live exchange rate — no hardcoded fallback per pricing rule
+    const exchangeRate = cart.exchangeRate || formData.exchangeRate
+    if (!exchangeRate || isNaN(exchangeRate) || exchangeRate <= 0) {
+      console.error('[createOrder] Exchange rate unavailable:', { cartRate: cart.exchangeRate, formRate: formData.exchangeRate })
+      return { success: false, error: 'Exchange rate unavailable. Please refresh and try again.' }
+    }
     const totalDisplayCurrency = totalNgn / exchangeRate
 
     // Generate order number

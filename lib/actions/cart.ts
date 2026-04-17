@@ -7,8 +7,6 @@ import type { CartItem, Product } from '@/types/database.types'
 // Cart expiration period (authenticated users only)
 const CART_EXPIRY_DAYS = 30
 
-// Default exchange rate: GBP to NGN (used as fallback if database rate unavailable)
-const DEFAULT_GBP_TO_NGN = 1950
 
 export interface CartItemWithProduct extends CartItem {
   product: Product
@@ -99,21 +97,19 @@ export async function addToCart(
     }
 
     // Fetch NGN exchange rate to convert GBP to NGN for storage
-    let exchangeRate = DEFAULT_GBP_TO_NGN
-    try {
-      const { data: rateData } = await supabase
-        .from('exchange_rates')
-        .select('rate_from_gbp')
-        .eq('currency_code', 'NGN')
-        .eq('is_active', true)
-        .single()
-      
-      if (rateData?.rate_from_gbp) {
-        exchangeRate = rateData.rate_from_gbp
-      }
-    } catch (e) {
-      console.warn('Failed to fetch NGN exchange rate for cart, using default:', DEFAULT_GBP_TO_NGN)
+    const { data: rateData, error: rateError } = await supabase
+      .from('exchange_rates')
+      .select('rate_from_gbp')
+      .eq('currency_code', 'NGN')
+      .eq('is_active', true)
+      .single()
+
+    if (rateError || !rateData?.rate_from_gbp) {
+      console.error('[addToCart] NGN exchange rate unavailable:', rateError?.message)
+      return { success: false, error: 'Exchange rate unavailable. Please try again.' }
     }
+
+    const exchangeRate = rateData.rate_from_gbp
 
     // Convert to NGN for storage (database uses NGN as canonical currency)
     const unitPriceNgn = Math.round(unitPriceGbp * exchangeRate * 100) / 100
@@ -313,23 +309,20 @@ export async function getCart(): Promise<CartWithItems | null> {
       0
     )
 
-    // Fetch NGN exchange rate from database
-    let exchangeRate = DEFAULT_GBP_TO_NGN
-    try {
-      const { data: rateData } = await supabase
-        .from('exchange_rates')
-        .select('rate_from_gbp')
-        .eq('currency_code', 'NGN')
-        .eq('is_active', true)
-        .single()
-      
-      if (rateData?.rate_from_gbp) {
-        exchangeRate = rateData.rate_from_gbp
-      }
-    } catch (e) {
-      // Use default rate if fetch fails
-      console.warn('Failed to fetch NGN exchange rate, using default:', DEFAULT_GBP_TO_NGN)
+    // Fetch NGN exchange rate from database — no fallback per pricing rule
+    const { data: rateData, error: rateError } = await supabase
+      .from('exchange_rates')
+      .select('rate_from_gbp')
+      .eq('currency_code', 'NGN')
+      .eq('is_active', true)
+      .single()
+
+    if (rateError || !rateData?.rate_from_gbp) {
+      console.error('[getCart] NGN exchange rate unavailable:', rateError?.message)
+      return null
     }
+
+    const exchangeRate = rateData.rate_from_gbp
 
     // Calculate NGN subtotal
     const subtotalNgn = Math.round(subtotalGbp * exchangeRate * 100) / 100

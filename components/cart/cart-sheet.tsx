@@ -41,7 +41,7 @@ export function CartSheet() {
         ) : hasItems ? (
           <>
             {/* Cart Items */}
-            <ScrollArea className="flex-1 -mx-6 px-6">
+            <ScrollArea className="flex-1 px-4">
               <div className="space-y-0">
                 {cart?.items.map((item) => (
                   <CartItem key={item.id} item={item} />
@@ -50,7 +50,7 @@ export function CartSheet() {
             </ScrollArea>
 
             {/* Cart Summary */}
-            <div className="-mx-6 px-6">
+            <div className="px-4 pb-2">
               <CartSummary />
             </div>
           </>

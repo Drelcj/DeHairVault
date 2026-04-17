@@ -78,9 +78,14 @@ export function OrderSummary({
             <CartProductImage product={item.product} quantity={item.quantity} />
             <div className="flex-1">
               <h4 className="font-medium text-foreground">{item.product.name}</h4>
-              <p className="text-sm text-muted-foreground">
-                {item.product.texture.replace('_', ' ')} • {item.product.grade.replace('_', ' ')}
-              </p>
+              {(item.product.texture != null || item.product.grade != null) && (
+                <p className="text-sm text-muted-foreground">
+                  {[item.product.texture, item.product.grade]
+                    .filter((v): v is string => v != null)
+                    .map(v => v.replace(/_/g, ' '))
+                    .join(' • ')}
+                </p>
+              )}
               {item.selected_length && (
                 <p className="text-sm text-muted-foreground">{item.selected_length} inches</p>
               )}

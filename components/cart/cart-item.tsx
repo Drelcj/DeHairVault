@@ -86,80 +86,82 @@ export function CartItem({ item }: CartItemProps) {
   const productUrl = item.product.slug ? `/shop/${item.product.slug}` : '#'
 
   return (
-    <div className="flex gap-4 py-4 border-b border-border">
-      {/* Product Image - Clickable */}
-      <Link 
+    <div className="flex items-start gap-3 py-4 border-b border-border overflow-hidden">
+      {/* Product Image */}
+      <Link
         href={productUrl}
-        className="relative w-20 h-20 rounded-lg overflow-hidden bg-secondary flex-shrink-0 hover:opacity-80 transition-opacity"
+        className="relative w-16 h-16 rounded-lg overflow-hidden bg-secondary flex-shrink-0 hover:opacity-80 transition-opacity"
       >
-{currentImage ? (
-        <Image
-          src={currentImage}
-          alt={item.product.name}
-          fill
-          className="object-cover"
-          sizes="80px"
-          onError={() => {
-            setImageIndex((prev) => {
-              if (prev + 1 < sources.length) {
-                return prev + 1
-              }
-              return prev
-            })
-          }}
-        />
-      ) : (
-        <div className="flex items-center justify-center text-xs text-muted-foreground">No image</div>
-      )}
+        {currentImage ? (
+          <Image
+            src={currentImage}
+            alt={item.product.name}
+            fill
+            className="object-cover"
+            sizes="64px"
+            onError={() => {
+              setImageIndex((prev) => {
+                if (prev + 1 < sources.length) return prev + 1
+                return prev
+              })
+            }}
+          />
+        ) : (
+          <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground">
+            No image
+          </div>
+        )}
       </Link>
 
-      {/* Product Details */}
-      <div className="flex-1 min-w-0">
-        <Link href={productUrl} className="hover:text-accent transition-colors">
+      {/* All product details — contained in this column */}
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <Link href={productUrl} className="hover:text-accent transition-colors min-w-0">
           <h4 className="font-medium text-sm text-foreground truncate">{item.product.name}</h4>
         </Link>
-        {item.selected_length && (
-          <p className="text-xs text-muted-foreground mt-1">Length: {item.selected_length}"</p>
-        )}
-        <p className="text-sm font-medium text-foreground mt-2">{formatPrice(totalPrice)}</p>
 
-        {/* Quantity Controls */}
-        <div className="flex items-center gap-2 mt-2">
+        {item.selected_length && (
+          <p className="text-xs text-muted-foreground">Length: {item.selected_length}"</p>
+        )}
+
+        {/* Price */}
+        <p className="text-sm font-semibold text-foreground mt-1">{formatPrice(totalPrice)}</p>
+
+        {/* Quantity controls + delete — left-aligned, no justify-between */}
+        <div className="flex items-center gap-1">
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7"
+            className="h-6 w-6"
             onClick={() => handleUpdateQuantity(item.quantity - 1)}
             disabled={isUpdating || item.quantity <= 1}
           >
             <Minus className="h-3 w-3" />
           </Button>
-          <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>
+          <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7"
+            className="h-6 w-6"
             onClick={() => handleUpdateQuantity(item.quantity + 1)}
             disabled={isUpdating || item.quantity >= item.product.stock_quantity}
           >
             <Plus className="h-3 w-3" />
           </Button>
-          {item.quantity >= item.product.stock_quantity && (
-            <span className="text-xs text-muted-foreground">Max</span>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+            onClick={handleRemove}
+            disabled={isUpdating}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
-      </div>
 
-      {/* Remove Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
-        onClick={handleRemove}
-        disabled={isUpdating}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+        {item.quantity >= item.product.stock_quantity && (
+          <p className="text-xs text-muted-foreground">Max quantity reached</p>
+        )}
+      </div>
     </div>
   )
 }
