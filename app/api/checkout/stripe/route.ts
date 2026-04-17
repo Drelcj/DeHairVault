@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${appUrl}/checkout/success?order_number=${orderNumber}`,
+      success_url: `${appUrl}/checkout/success?order_number=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/checkout/cancel?reason=cancelled`,
       customer_email: order.customer_email,
       client_reference_id: orderId,
