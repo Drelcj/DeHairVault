@@ -91,8 +91,13 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         // Open cart to show the added item
         openCart()
       } else if (result.requiresAuth) {
+        // Persist the intended cart action so it can be replayed after login
+        sessionStorage.setItem(
+          'pendingCartItem',
+          JSON.stringify({ productId: product.id, quantity: 1, selectedLength: defaultLength })
+        )
         toast.info('Please log in to add items to your cart')
-        router.push('/login?redirect=' + encodeURIComponent('/shop'))
+        router.push('/login?redirectTo=' + encodeURIComponent(window.location.pathname))
       } else {
         toast.error(result.error || 'Failed to add to cart')
       }

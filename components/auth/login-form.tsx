@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { loginAction } from "@/lib/actions/auth"
+import { addToCart } from "@/lib/actions/cart"
 
 type LoginFormProps = {
   redirectTo?: string
@@ -43,6 +44,21 @@ function LoginFormInner({ redirectTo = "/" }: LoginFormProps) {
       }
       
       if (result?.success && result?.destination) {
+        // Replay any cart item the user tried to add before being prompted to log in
+        try {
+          const pendingRaw = sessionStorage.getItem('pendingCartItem')
+          if (pendingRaw) {
+            sessionStorage.removeItem('pendingCartItem')
+            const pending = JSON.parse(pendingRaw) as {
+              productId: string
+              quantity: number
+              selectedLength: number | null
+            }
+            await addToCart(pending.productId, pending.quantity, pending.selectedLength)
+          }
+        } catch {
+          // Non-critical — just proceed to navigation
+        }
         // Use router.push then refresh to ensure proper navigation with cookies
         router.push(result.destination)
         router.refresh()
