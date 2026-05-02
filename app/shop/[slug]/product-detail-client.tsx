@@ -348,24 +348,30 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </div>
           </div>
 
-          {/* AWS HLS Streaming Video */}
-          {(() => {
-            const hlsKey = (product as unknown as { hls_output_key?: string | null }).hls_output_key
-            if (!hlsKey) return null
-            return (
-              <div className="pt-6 border-t border-border">
-                <h3 className="text-lg font-medium text-foreground mb-3 flex items-center gap-2">
-                  <Play className="h-5 w-5 text-accent" />
-                  Product Video
-                </h3>
+          {/* S3/HLS Streaming Video — only renders when a transcoding job exists */}
+          {product.hls_output_key && (
+            <div className="pt-6 border-t border-border">
+              <h3 className="text-lg font-medium text-foreground mb-3 flex items-center gap-2">
+                <Play className="h-5 w-5 text-accent" />
+                Product Video
+              </h3>
+              {product.transcoding_status === 'processing' ? (
+                <div className="flex items-center justify-center bg-secondary min-h-[200px] rounded-lg">
+                  <p className="text-sm text-muted-foreground">Video is being processed. Check back soon.</p>
+                </div>
+              ) : product.transcoding_status === 'error' ? (
+                <div className="flex items-center justify-center bg-secondary min-h-[200px] rounded-lg">
+                  <p className="text-sm text-muted-foreground">Video processing failed. Please contact support.</p>
+                </div>
+              ) : (
                 <HlsVideoPlayer
-                  src={`${process.env.NEXT_PUBLIC_CLOUDFRONT_STREAM_URL}/${hlsKey}/hls/index.m3u8`}
+                  src={`${process.env.NEXT_PUBLIC_CLOUDFRONT_STREAM_URL}/${product.hls_output_key}/hls/index.m3u8`}
                   title={product.name}
                   autoplayOnScroll
                 />
-              </div>
-            )
-          })()}
+              )}
+            </div>
+          )}
 
         </div>
       </div>

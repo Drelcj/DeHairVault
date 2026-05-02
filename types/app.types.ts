@@ -49,7 +49,6 @@ export type OrderSummary     = Database['public']['Views']['v_order_summary']['R
 export type HairGrade  = Database['public']['Enums']['hair_grade']
 export type HairOrigin = Database['public']['Enums']['hair_origin']
 export type HairTexture = Database['public']['Enums']['hair_texture']
-export type OrderStatus = Database['public']['Enums']['order_status']
 export type OrderType   = Database['public']['Enums']['order_type']
 export type UserRole    = Database['public']['Enums']['user_role']
 
@@ -58,6 +57,18 @@ export type UserRole    = Database['public']['Enums']['user_role']
 // Each block exports BOTH a const object (for value access like HairCategory.BUNDLES)
 // AND a type alias (for annotation like field: HairCategory), matching the old enum API
 // so no callsites need to change beyond updating the import path.
+
+export const OrderStatus = {
+  PENDING:    'PENDING',
+  CONFIRMED:  'CONFIRMED',
+  PROCESSING: 'PROCESSING',
+  SHIPPED:    'SHIPPED',
+  DELIVERED:  'DELIVERED',
+  CANCELLED:  'CANCELLED',
+  REFUNDED:   'REFUNDED',
+} as const
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type OrderStatus = Database['public']['Enums']['order_status']
 
 export const HairCategory = {
   BUNDLES:  'BUNDLES',

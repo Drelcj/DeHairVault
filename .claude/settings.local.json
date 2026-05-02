@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(git show *)",
+      "Bash(grep -i cloudfront echo \"---\" ls C:/Users/manue/Documents/Projects/DeHairVault/web/DeHairVault/.env*)"
     ]
   }
 }
