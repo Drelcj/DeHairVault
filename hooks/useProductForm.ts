@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { generateProductSlug } from '@/lib/utils/product'
 import type { ProductFormValues, ProductVariantInput } from '@/types/admin'
-import { HairCategory } from '@/types/database.types'
+import { HairCategory } from '@/types/app.types'
 
 const defaultValues: ProductFormValues = {
   name: '',
@@ -26,9 +26,8 @@ const defaultValues: ProductFormValues = {
   track_inventory: true,
   allow_backorder: false,
   images: [],
-  thumbnail_url: null,
-  video_url: null,
-  video_urls: [],
+  hls_output_key: null,
+  transcoding_status: null,
   is_active: true,
   is_featured: false,
   is_new_arrival: false,

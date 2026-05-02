@@ -1,7 +1,7 @@
 'use server'
 
 import { createServiceClient } from '@/lib/supabase/server'
-import type { Product, HairOrigin } from '@/types/database.types'
+import type { Product, HairOrigin } from '@/types/app.types'
 
 /**
  * Get products by origin

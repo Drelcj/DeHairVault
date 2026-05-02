@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import type { Product, HairTexture } from '@/types/database.types'
+import type { Product, HairTexture } from '@/types/app.types'
 
 export interface ProductFilters {
   textures?: HairTexture[]

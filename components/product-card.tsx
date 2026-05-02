@@ -12,7 +12,7 @@ import { addToCart } from "@/lib/actions/cart"
 import { useCart } from "@/contexts/cart-context"
 import { useCurrency } from "@/contexts/currency-context"
 import { toast } from "sonner"
-import type { Product } from "@/types/database.types"
+import type { Product } from "@/types/app.types"
 
 /**
  * Normalize a slug for consistent URL generation

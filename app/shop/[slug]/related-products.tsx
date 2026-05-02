@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useCurrency } from '@/contexts/currency-context'
-import type { Product, HairOrigin } from '@/types/database.types'
+import type { Product, HairOrigin } from '@/types/app.types'
 
 // Map origins to display names
 const originDisplayNames: Record<HairOrigin, string> = {

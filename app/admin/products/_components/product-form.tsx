@@ -9,13 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { TagInput } from '@/components/ui/tag-input'
 import { CreatableSelect } from '@/components/ui/creatable-select'
-import { VideoUrlInput } from '@/components/admin/video-url-input'
+import { VideoUpload } from './video-upload'
 import { hairCategoryOptions, hairGradeOptions, hairOriginOptions, drawTypeOptions } from '@/lib/constants/enums'
 import { getHairTextures, createHairTexture, type HairTextureOption } from '@/lib/actions/textures'
 import { useProductForm } from '@/hooks/useProductForm'
 import { generateProductSlug } from '@/lib/utils/product'
 import type { ActionResult, ProductFormValues } from '@/types/admin'
-import { DrawType, HairGrade } from '@/types/database.types'
+import { DrawType, HairGrade } from '@/types/app.types'
 import { ImageUpload } from './image-upload'
 
 type Props = {
@@ -441,49 +441,44 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
         <div className="space-y-6">
           <ImageUpload
             images={form.values.images}
-            onChange={(images) => {
-              form.updateField('images', images)
-              // Auto-set thumbnail to first image if not set
-              if (images.length > 0 && !form.values.thumbnail_url) {
-                form.updateField('thumbnail_url', images[0])
-              }
-            }}
+            onChange={(images) => form.updateField('images', images)}
             maxImages={10}
             label="Product Images"
           />
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-3">
-              <Label htmlFor="thumbnail_url">Thumbnail URL</Label>
-              <Input
-                id="thumbnail_url"
-                value={form.values.thumbnail_url ?? ''}
-                onChange={(e) => form.updateField('thumbnail_url', e.target.value || null)}
-                placeholder="https://..."
-                className="bg-background"
-              />
+          {/* AWS HLS Video Upload */}
+          <div className="space-y-3">
+            <div className="border-b border-border pb-3">
+              <p className="text-sm font-medium text-foreground">Streaming Video (HLS)</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Upload a video for adaptive bitrate streaming on the product page. Transcoded automatically to 1080p / 720p / 480p.
+              </p>
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="video_url">YouTube Video URL (for product page)</Label>
-              <Input
-                id="video_url"
-                value={form.values.video_url ?? ''}
-                onChange={(e) => form.updateField('video_url', e.target.value || null)}
-                placeholder="https://youtube.com/watch?v=..."
-                className="bg-background"
+            {form.values.hls_output_key ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">Streaming video attached</p>
+                  <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">
+                    {form.values.hls_output_key}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => form.updateField('hls_output_key', null)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <VideoUpload
+                onUploadComplete={(outputKeyPrefix) =>
+                  form.updateField('hls_output_key', outputKeyPrefix)
+                }
               />
-              <p className="text-xs text-muted-foreground">YouTube video to display in product details section</p>
-            </div>
-
-            {/* Cloudinary Video URLs for Media Carousel */}
-            <div className="space-y-3 md:col-span-2">
-              <VideoUrlInput
-                value={form.values.video_urls ?? []}
-                onChange={(urls) => form.updateField('video_urls', urls)}
-              />
-              <p className="text-xs text-muted-foreground">Cloudinary videos to show in the product image carousel</p>
-            </div>
+            )}
           </div>
         </div>
       </section>

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import type { CartItem, Product } from '@/types/database.types'
+import type { CartItem, Product } from '@/types/app.types'
 
 // Cart expiration period (authenticated users only)
 const CART_EXPIRY_DAYS = 30

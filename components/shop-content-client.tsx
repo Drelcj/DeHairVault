@@ -8,7 +8,7 @@ import { ShopToolbar } from "./shop-toolbar"
 import { SlidersHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
-import type { Product, HairTexture, HairCategory, HairOrigin } from "@/types/database.types"
+import type { Product, HairTexture, HairCategory, HairOrigin } from "@/types/app.types"
 
 export interface FilterState {
   category: HairCategory | null

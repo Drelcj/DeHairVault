@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { updateOrderStatus, clearCartAfterOrder, getOrderByNumber } from '@/lib/actions/checkout'
-import { OrderStatus } from '@/types/database.types'
+import { OrderStatus } from '@/types/app.types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 

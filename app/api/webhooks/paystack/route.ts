@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { updateOrderStatus, clearCartAfterOrder } from '@/lib/actions/checkout'
-import { OrderStatus } from '@/types/database.types'
+import { OrderStatus } from '@/types/app.types'
 
 const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY!
 

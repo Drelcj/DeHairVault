@@ -1,7 +1,7 @@
 // Currency Utilities
 // Functions for currency formatting and conversion
 
-import type { ExchangeRate } from '@/types/database.types';
+import type { ExchangeRate } from '@/types/app.types';
 
 /**
  * Currency symbols mapping

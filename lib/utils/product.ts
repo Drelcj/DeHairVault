@@ -1,7 +1,7 @@
 // Product Utilities
 // Functions for product-related calculations and formatting
 
-import type { Product, HairGrade } from '@/types/database.types';
+import type { Product, HairGrade } from '@/types/app.types';
 
 /**
  * Calculate product price with length modifier

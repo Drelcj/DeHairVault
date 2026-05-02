@@ -1,4 +1,4 @@
-import { DrawType, HairCategory, KNOWN_HAIR_GRADES, KNOWN_HAIR_TEXTURES, KNOWN_HAIR_ORIGINS } from '@/types/database.types'
+import { HairCategory, DrawType, KNOWN_HAIR_GRADES, KNOWN_HAIR_TEXTURES, KNOWN_HAIR_ORIGINS } from '@/types/app.types'
 
 // Hair grade options - uses string values for dynamic support
 // These are the known/common grades, but the system accepts any string from admin

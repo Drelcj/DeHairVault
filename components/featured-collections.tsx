@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getFeaturedProducts } from "@/lib/actions/products"
 import { PriceDisplay } from "@/components/price-display"
-import type { Product } from "@/types/database.types"
+import type { Product } from "@/types/app.types"
 
 // Fallback images for when products don't have images
 const fallbackImages = [

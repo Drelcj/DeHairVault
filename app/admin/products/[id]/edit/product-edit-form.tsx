@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { createClient } from "@/lib/supabase/client"
-import type { Product, ProductVariant } from "@/types/database.types"
+import type { Product, ProductVariant } from "@/types/app.types"
 
 type EditableProduct = Pick<
   Product,

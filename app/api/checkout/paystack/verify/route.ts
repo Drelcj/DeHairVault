@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { updateOrderStatus, clearCartAfterOrder, getOrderByNumber } from '@/lib/actions/checkout'
-import { OrderStatus } from '@/types/database.types'
+import { OrderStatus } from '@/types/app.types'
 
 /**
  * Verify Paystack payment and update order status

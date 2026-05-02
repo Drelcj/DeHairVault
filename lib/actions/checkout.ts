@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import type { OrderInsert, OrderItemInsert, OrderType, OrderStatus } from '@/types/database.types'
+import type { OrderInsert, OrderItemInsert, OrderType, OrderStatus } from '@/types/app.types'
 import { getCart, clearCart } from './cart'
 import { calculateShippingCost } from '@/lib/services/shipping'
 

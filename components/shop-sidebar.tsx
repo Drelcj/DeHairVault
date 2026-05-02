@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { HairCategory } from "@/types/database.types"
+import { HairCategory } from "@/types/app.types"
 import { useCurrency } from "@/contexts/currency-context"
 import type { FilterState } from "./shop-content-client"
 

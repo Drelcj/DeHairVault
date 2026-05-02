@@ -41,9 +41,11 @@ function normalizeProductPayload(payload: ProductFormValues) {
     track_inventory: payload.track_inventory,
     allow_backorder: payload.allow_backorder,
     images: payload.images,
-    thumbnail_url: payload.thumbnail_url,
-    video_url: payload.video_url,
-    video_urls: payload.video_urls || null,
+    hls_output_key: payload.hls_output_key ?? null,
+    // transcoding_status is intentionally excluded from the update payload.
+    // It is managed exclusively by startVideoTranscoding (on job queue) and
+    // the EventBridge Lambda (on job completion/error). Including it here would
+    // reset 'complete' back to 'processing' every time the admin saves the form.
     is_active: payload.is_active,
     is_featured: payload.is_featured,
     is_new_arrival: payload.is_new_arrival,

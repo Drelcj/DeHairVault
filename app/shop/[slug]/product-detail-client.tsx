@@ -1,221 +1,19 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play, Loader2, PictureInPicture2 } from 'lucide-react'
+import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { cn } from '@/lib/utils'
-import { getWebCompatibleVideoUrl } from '@/lib/utils/cloudinary-video'
+import { HlsVideoPlayer } from '@/components/ui/hls-video-player'
 import { addToCart } from '@/lib/actions/cart'
 import { useCart } from '@/contexts/cart-context'
 import { useCurrency } from '@/contexts/currency-context'
 import { toast } from 'sonner'
-import type { Product } from '@/types/database.types'
-
-/**
- * ProductVideo Component - Handles video playback with:
- * - Intersection Observer for viewport-based autoplay (desktop)
- * - Manual Picture-in-Picture (PiP) toggle button
- * - Intrinsic dimension preservation (w-full h-auto)
- * - Cross-browser Cloudinary URL transformation
- */
-function ProductVideo({ url, index }: { url: string; index: number }) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasError, setHasError] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isPiPActive, setIsPiPActive] = useState(false)
-  const [isPiPSupported, setIsPiPSupported] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  // Transform URL for web compatibility (handles .mov → mp4 conversion)
-  const compatibleUrl = getWebCompatibleVideoUrl(url)
-
-  // Check PiP support on mount
-  useEffect(() => {
-    setIsPiPSupported(
-      typeof document !== 'undefined' && 
-      'pictureInPictureEnabled' in document && 
-      document.pictureInPictureEnabled
-    )
-  }, [])
-
-  // Intersection Observer for viewport-based autoplay (desktop only)
-  useEffect(() => {
-    const video = videoRef.current
-    const container = containerRef.current
-    if (!video || !container || isLoading || hasError) return
-
-    // Only enable intersection-based autoplay on larger screens (lg+)
-    const isDesktop = window.matchMedia('(min-width: 1024px)').matches
-    if (!isDesktop) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Video is in viewport - autoplay muted
-            video.muted = true
-            video.play().catch(() => {
-              // Autoplay blocked - user will need to interact
-              console.log('[ProductVideo] Autoplay blocked by browser')
-            })
-          } else {
-            // Video is out of viewport - pause to save resources
-            if (!video.paused && !isPiPActive) {
-              video.pause()
-            }
-          }
-        })
-      },
-      {
-        threshold: 0.5, // Trigger when 50% of video is visible
-        rootMargin: '0px'
-      }
-    )
-
-    observer.observe(container)
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [isLoading, hasError, isPiPActive])
-
-  // Handle PiP state changes
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    const handleEnterPiP = () => setIsPiPActive(true)
-    const handleLeavePiP = () => setIsPiPActive(false)
-
-    video.addEventListener('enterpictureinpicture', handleEnterPiP)
-    video.addEventListener('leavepictureinpicture', handleLeavePiP)
-
-    return () => {
-      video.removeEventListener('enterpictureinpicture', handleEnterPiP)
-      video.removeEventListener('leavepictureinpicture', handleLeavePiP)
-    }
-  }, [])
-
-  const handleLoadedData = () => {
-    setIsLoading(false)
-    setHasError(false)
-  }
-
-  const handleError = () => {
-    setIsLoading(false)
-    setHasError(true)
-    console.error(`[ProductVideo] Failed to load video ${index + 1}:`, url)
-  }
-
-  const handlePlay = () => setIsPlaying(true)
-  const handlePause = () => setIsPlaying(false)
-
-  // Toggle Picture-in-Picture mode
-  const togglePiP = async () => {
-    const video = videoRef.current
-    if (!video || !isPiPSupported) return
-
-    try {
-      if (document.pictureInPictureElement === video) {
-        await document.exitPictureInPicture()
-      } else {
-        await video.requestPictureInPicture()
-      }
-    } catch (error) {
-      console.error('[ProductVideo] PiP error:', error)
-      toast.error('Picture-in-Picture is not available')
-    }
-  }
-
-  return (
-    <div ref={containerRef} className="relative rounded-lg bg-secondary group">
-      {/* Loading State */}
-      {isLoading && !hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-secondary z-10 min-h-[200px]">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 text-accent animate-spin" />
-            <span className="text-sm text-muted-foreground">Loading video...</span>
-          </div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {hasError && (
-        <div className="flex items-center justify-center bg-secondary min-h-[200px] rounded-lg">
-          <div className="flex flex-col items-center gap-2 text-center px-4">
-            <Play className="h-8 w-8 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Unable to load video</span>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-accent hover:underline"
-            >
-              Open in new tab
-            </a>
-          </div>
-        </div>
-      )}
-
-      {/* Video Player */}
-      <video
-        ref={videoRef}
-        src={compatibleUrl}
-        controls
-        playsInline
-        muted
-        preload="metadata"
-        className={cn(
-          "w-full h-auto rounded-lg transition-opacity duration-300",
-          (isLoading || hasError) ? "opacity-0 absolute" : "opacity-100"
-        )}
-        onLoadedData={handleLoadedData}
-        onError={handleError}
-        onPlay={handlePlay}
-        onPause={handlePause}
-      />
-
-      {/* Picture-in-Picture Toggle Button */}
-      {isPiPSupported && !isLoading && !hasError && (
-        <button
-          onClick={togglePiP}
-          className={cn(
-            "absolute top-3 right-3 z-20",
-            "w-10 h-10 rounded-full",
-            "flex items-center justify-center",
-            "transition-all duration-200",
-            "focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
-            // Light/Dark mode adaptive styling
-            isPiPActive
-              ? "bg-accent text-accent-foreground shadow-lg"
-              : "bg-background/80 dark:bg-background/90 text-foreground hover:bg-background shadow-md backdrop-blur-sm",
-            // Show on hover or when PiP is active
-            "opacity-0 group-hover:opacity-100",
-            isPiPActive && "opacity-100"
-          )}
-          title={isPiPActive ? "Exit Picture-in-Picture" : "Picture-in-Picture"}
-          aria-label={isPiPActive ? "Exit Picture-in-Picture" : "Enter Picture-in-Picture"}
-        >
-          <PictureInPicture2 className="h-5 w-5" />
-        </button>
-      )}
-
-      {/* Play Overlay (visible when not loading, no error, and not playing) */}
-      {!isLoading && !hasError && !isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
-          <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
-            <Play className="h-8 w-8 text-foreground ml-1" fill="currentColor" />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+import type { Product } from '@/types/app.types'
 
 interface ProductDetailClientProps {
   product: Product
@@ -240,24 +38,6 @@ function formatCategory(category: string): string {
     .split('_')
     .map(word => word.charAt(0) + word.slice(1).toLowerCase())
     .join(' ')
-}
-
-// Helper function to extract YouTube video ID from various URL formats
-function getYouTubeVideoId(url: string): string | null {
-  if (!url) return null
-  
-  // Handle various YouTube URL formats
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\s?]+)/,
-    /^([a-zA-Z0-9_-]{11})$/, // Just the video ID
-  ]
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match) return match[1]
-  }
-  
-  return null
 }
 
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
@@ -288,7 +68,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     }
   }, [product?.name])
 
-  const images = productImages.length > 0 ? productImages : [product.thumbnail_url || '']
+  const images = productImages.length > 0 ? productImages : []
   const currentImage = images[selectedImageIndex] || ''
   const fallbackImage = '/placeholder.jpg'
 
@@ -568,39 +348,25 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </div>
           </div>
 
-          {/* Product Video (YouTube) */}
-          {product.video_url && getYouTubeVideoId(product.video_url) && (
-            <div className="pt-6 border-t border-border">
-              <h3 className="text-lg font-medium text-foreground mb-3">Product Video</h3>
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-secondary">
-                <iframe
-                  src={`https://www.youtube.com/embed/${getYouTubeVideoId(product.video_url)}`}
-                  title={`${product.name} - Product Video`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full"
+          {/* AWS HLS Streaming Video */}
+          {(() => {
+            const hlsKey = (product as unknown as { hls_output_key?: string | null }).hls_output_key
+            if (!hlsKey) return null
+            return (
+              <div className="pt-6 border-t border-border">
+                <h3 className="text-lg font-medium text-foreground mb-3 flex items-center gap-2">
+                  <Play className="h-5 w-5 text-accent" />
+                  Product Video
+                </h3>
+                <HlsVideoPlayer
+                  src={`${process.env.NEXT_PUBLIC_CLOUDFRONT_STREAM_URL}/${hlsKey}/hls/index.m3u8`}
+                  title={product.name}
+                  autoplayOnScroll
                 />
               </div>
-            </div>
-          )}
+            )
+          })()}
 
-          {/* Cloudinary Videos Section */}
-          {product.video_urls && product.video_urls.length > 0 && (
-            <div className="pt-6 border-t border-border">
-              <h3 className="text-lg font-medium text-foreground mb-3 flex items-center gap-2">
-                <Play className="h-5 w-5 text-accent" />
-                Product Videos
-              </h3>
-              <div className={cn(
-                "grid gap-4",
-                product.video_urls.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
-              )}>
-                {product.video_urls.map((videoUrl, index) => (
-                  <ProductVideo key={index} url={videoUrl} index={index} />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

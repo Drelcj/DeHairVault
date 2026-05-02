@@ -1,7 +1,7 @@
 // Admin-specific shared types
 // Values used by admin product create/edit flows
 
-import type { DrawType, HairCategory, HairGrade, HairOrigin, HairTexture } from './database.types'
+import type { DrawType, HairCategory, HairGrade, HairOrigin, HairTexture } from './app.types'
 
 export interface ProductVariantInput {
   id?: string
@@ -34,9 +34,8 @@ export interface ProductFormValues {
   track_inventory: boolean
   allow_backorder: boolean
   images: string[]
-  thumbnail_url: string | null
-  video_url: string | null
-  video_urls: string[]
+  hls_output_key: string | null
+  transcoding_status: 'processing' | 'complete' | 'error' | null
   is_active: boolean
   is_featured: boolean
   is_new_arrival: boolean
