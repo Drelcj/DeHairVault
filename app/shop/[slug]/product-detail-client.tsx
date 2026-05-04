@@ -70,7 +70,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
   const images = productImages.length > 0 ? productImages : []
   const currentImage = images[selectedImageIndex] || ''
-  const fallbackImage = '/placeholder.jpg'
+  const fallbackImage = images[0] || '/placeholder.jpg'
 
   // Handle Add to Cart
   const handleAddToCart = async () => {
@@ -349,29 +349,37 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           </div>
 
           {/* S3/HLS Streaming Video — only renders when a transcoding job exists */}
-          {product.hls_output_key && (
-            <div className="pt-6 border-t border-border">
-              <h3 className="text-lg font-medium text-foreground mb-3 flex items-center gap-2">
-                <Play className="h-5 w-5 text-accent" />
-                Product Video
-              </h3>
-              {product.transcoding_status === 'processing' ? (
-                <div className="flex items-center justify-center bg-secondary min-h-[200px] rounded-lg">
-                  <p className="text-sm text-muted-foreground">Video is being processed. Check back soon.</p>
-                </div>
-              ) : product.transcoding_status === 'error' ? (
-                <div className="flex items-center justify-center bg-secondary min-h-[200px] rounded-lg">
-                  <p className="text-sm text-muted-foreground">Video processing failed. Please contact support.</p>
-                </div>
-              ) : (
-                <HlsVideoPlayer
-                  src={`${process.env.NEXT_PUBLIC_CLOUDFRONT_STREAM_URL}/${product.hls_output_key}/hls/index.m3u8`}
-                  title={product.name}
-                  autoplayOnScroll
-                />
-              )}
-            </div>
-          )}
+          {product.hls_output_key && (() => {
+            // hls_output_key = "videos/1777727670128-hair_video"
+            // MediaConvert names manifests as: {basename}-{resolution}.m3u8
+            // e.g. hls/1777727670128-hair_video-1080p.m3u8
+            const hlsBaseName = product.hls_output_key.split('/').pop()!
+            const hlsSrc = `${process.env.NEXT_PUBLIC_CLOUDFRONT_STREAM_URL}/${product.hls_output_key}/hls/${hlsBaseName}-1080p.m3u8`
+
+            return (
+              <div className="pt-6 border-t border-border">
+                <h3 className="text-lg font-medium text-foreground mb-3 flex items-center gap-2">
+                  <Play className="h-5 w-5 text-accent" />
+                  Product Video
+                </h3>
+                {product.transcoding_status === 'processing' ? (
+                  <div className="flex items-center justify-center bg-secondary min-h-[200px] rounded-lg">
+                    <p className="text-sm text-muted-foreground">Video is being processed. Check back soon.</p>
+                  </div>
+                ) : product.transcoding_status === 'error' ? (
+                  <div className="flex items-center justify-center bg-secondary min-h-[200px] rounded-lg">
+                    <p className="text-sm text-muted-foreground">Video processing failed. Please contact support.</p>
+                  </div>
+                ) : (
+                  <HlsVideoPlayer
+                    src={hlsSrc}
+                    title={product.name}
+                    autoplayOnScroll
+                  />
+                )}
+              </div>
+            )
+          })()}
 
         </div>
       </div>
