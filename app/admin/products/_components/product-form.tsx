@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { TagInput } from '@/components/ui/tag-input'
 import { CreatableSelect } from '@/components/ui/creatable-select'
+import { toast } from 'sonner'
 import { VideoUpload } from './video-upload'
+import { deleteProductVideo } from '@/lib/actions/video-upload'
 import { hairCategoryOptions, hairGradeOptions, hairOriginOptions, drawTypeOptions } from '@/lib/constants/enums'
 import { getHairTextures, createHairTexture, type HairTextureOption } from '@/lib/actions/textures'
 import { useProductForm } from '@/hooks/useProductForm'
@@ -22,11 +24,14 @@ type Props = {
   initialData?: Partial<ProductFormValues>
   onSubmit: (values: ProductFormValues) => Promise<ActionResult>
   mode?: 'create' | 'edit'
+  /** Required in edit mode so the Remove button can delete S3 assets and update the DB. */
+  productId?: string
 }
 
-export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
+export function ProductForm({ initialData, onSubmit, mode = 'create', productId }: Props) {
   const form = useProductForm(initialData)
   const [isPending, startTransition] = useTransition()
+  const [isRemovingVideo, setIsRemovingVideo] = useState(false)
   // Track if user has manually edited the slug
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!initialData?.slug)
   
@@ -467,9 +472,24 @@ export function ProductForm({ initialData, onSubmit, mode = 'create' }: Props) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => form.updateField('hls_output_key', null)}
+                  disabled={isRemovingVideo}
+                  onClick={async () => {
+                    const key = form.values.hls_output_key!
+                    setIsRemovingVideo(true)
+                    try {
+                      const result = await deleteProductVideo(key, productId)
+                      if (result.success) {
+                        form.updateField('hls_output_key', null)
+                        toast.success('Video removed and S3 assets deleted')
+                      } else {
+                        toast.error(result.error ?? 'Failed to delete video')
+                      }
+                    } finally {
+                      setIsRemovingVideo(false)
+                    }
+                  }}
                 >
-                  Remove
+                  {isRemovingVideo ? 'Removing…' : 'Remove'}
                 </Button>
               </div>
             ) : (

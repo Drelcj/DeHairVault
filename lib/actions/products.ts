@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { deleteProductVideo } from '@/lib/actions/video-upload'
 import type { Product, HairTexture } from '@/types/app.types'
 
 export interface ProductFilters {
@@ -300,17 +301,35 @@ export async function deleteProduct(productId: string): Promise<{ success: boole
       return { success: false, error: 'Forbidden - Admin access required' }
     }
     
+    // Purge S3 video assets before removing the DB row so we never leave
+    // orphaned objects in either bucket.
+    const { data: productRow } = await serviceClient
+      .from('products')
+      .select('hls_output_key')
+      .eq('id', productId)
+      .single()
+
+    if (productRow?.hls_output_key) {
+      // deleteProductVideo handles both buckets; errors are logged internally.
+      // We intentionally do NOT abort the product delete if S3 cleanup fails —
+      // a manual S3 sweep is cheaper than leaving a ghost DB row.
+      const videoResult = await deleteProductVideo(productRow.hls_output_key)
+      if (!videoResult.success) {
+        console.error('[deleteProduct] S3 cleanup warning:', videoResult.error)
+      }
+    }
+
     // Delete the product (cascade will handle variants)
     const { error: deleteError } = await serviceClient
       .from('products')
       .delete()
       .eq('id', productId)
-    
+
     if (deleteError) {
       console.error('[deleteProduct] Error:', deleteError)
       return { success: false, error: deleteError.message }
     }
-    
+
     console.log(`[deleteProduct] Successfully deleted product: ${productId}`)
     return { success: true }
   } catch (error) {

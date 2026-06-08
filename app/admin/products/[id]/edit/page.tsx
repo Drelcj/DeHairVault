@@ -114,7 +114,7 @@ export default async function AdminProductEditPage({ params }: PageProps) {
 
       {/* Form Card */}
       <div className="rounded-xl border border-border bg-card p-6 md:p-8">
-        <ProductForm mode="edit" initialData={initialData} onSubmit={handleSubmit} />
+        <ProductForm mode="edit" productId={id} initialData={initialData} onSubmit={handleSubmit} />
       </div>
     </div>
   )

@@ -1,6 +1,12 @@
 'use server'
 
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import {
   MediaConvertClient,
@@ -243,6 +249,133 @@ export async function startVideoTranscoding(
   }
 
   return { success: true, jobId, outputKeyPrefix }
+}
+
+// ---------------------------------------------------------------------------
+// Video Deletion
+// ---------------------------------------------------------------------------
+
+export interface DeleteVideoResult {
+  success: true
+  ingestDeleted: boolean
+  hlsObjectsDeleted: number
+}
+
+export interface DeleteVideoError {
+  success: false
+  error: string
+}
+
+/**
+ * Deletes a product's video assets from both S3 buckets and optionally
+ * clears the DB reference.
+ *
+ * 1. Ingest bucket (dehairvault-ingest): deletes the raw upload file via a
+ *    prefix scan on `uploads/{basename}` — handles any extension.
+ * 2. Stream bucket (dehairvault-stream): batch-deletes all objects under
+ *    `{hlsOutputKey}/` (hls/ segments + playlists + thumbnails/).
+ * 3. If productId is supplied, sets hls_output_key and transcoding_status
+ *    to null in the products table.
+ *
+ * Ingest deletion is best-effort; a failure there does not abort stream
+ * cleanup (stream files are served to customers — they must be removed).
+ */
+export async function deleteProductVideo(
+  hlsOutputKey: string,
+  productId?: string
+): Promise<DeleteVideoResult | DeleteVideoError> {
+  const session = await getSessionUser()
+  if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.profile?.role ?? '')) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  const region = process.env.AWS_REGION
+  const ingestBucket = process.env.AWS_S3_INGEST_BUCKET
+  const streamBucket = process.env.AWS_S3_STREAM_BUCKET
+
+  if (!region || !ingestBucket || !streamBucket) {
+    return { success: false, error: 'AWS S3 configuration is missing.' }
+  }
+
+  const s3 = new S3Client({
+    region,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    },
+  })
+
+  // ── 1. Delete raw ingest file ─────────────────────────────────────────────
+  // hlsOutputKey = "videos/{basename}"  →  ingest prefix = "uploads/{basename}"
+  // The extension is unknown at this point, so we list with the prefix and
+  // delete whatever we find (always a single file).
+  const basename = hlsOutputKey.replace(/^videos\//, '')
+  const ingestPrefix = `uploads/${basename}`
+  let ingestDeleted = false
+
+  try {
+    const listed = await s3.send(
+      new ListObjectsV2Command({ Bucket: ingestBucket, Prefix: ingestPrefix })
+    )
+    if (listed.Contents && listed.Contents.length > 0) {
+      for (const obj of listed.Contents) {
+        if (obj.Key) {
+          await s3.send(new DeleteObjectCommand({ Bucket: ingestBucket, Key: obj.Key }))
+        }
+      }
+      ingestDeleted = true
+    }
+  } catch (err) {
+    // Non-fatal: ingest files are raw source material. Log and continue.
+    console.error('[deleteProductVideo] Failed to delete ingest file:', err)
+  }
+
+  // ── 2. Batch-delete all HLS/thumbnail objects from the stream bucket ──────
+  // Prefix covers hls/*.ts, hls/*.m3u8, thumbnails/*.jpg
+  let hlsObjectsDeleted = 0
+  const streamPrefix = `${hlsOutputKey}/`
+  let continuationToken: string | undefined
+
+  try {
+    do {
+      const listed = await s3.send(
+        new ListObjectsV2Command({
+          Bucket: streamBucket,
+          Prefix: streamPrefix,
+          ContinuationToken: continuationToken,
+        })
+      )
+
+      if (listed.Contents && listed.Contents.length > 0) {
+        await s3.send(
+          new DeleteObjectsCommand({
+            Bucket: streamBucket,
+            Delete: {
+              Objects: listed.Contents.map((obj) => ({ Key: obj.Key! })),
+              Quiet: true,
+            },
+          })
+        )
+        hlsObjectsDeleted += listed.Contents.length
+      }
+
+      continuationToken = listed.IsTruncated ? listed.NextContinuationToken : undefined
+    } while (continuationToken)
+  } catch (err) {
+    console.error('[deleteProductVideo] Failed to delete HLS stream objects:', err)
+    return { success: false, error: 'Failed to delete HLS files from stream bucket.' }
+  }
+
+  // ── 3. Clear DB reference if product is known ─────────────────────────────
+  if (productId) {
+    const supabase = createServiceClient()
+    await supabase
+      .from('products')
+      .update({ hls_output_key: null, transcoding_status: null })
+      .eq('id', productId)
+  }
+
+  return { success: true, ingestDeleted, hlsObjectsDeleted }
 }
 
 // ---------------------------------------------------------------------------
