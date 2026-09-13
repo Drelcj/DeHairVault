@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { OrderInsert, OrderItemInsert, OrderType, OrderStatus } from '@/types/app.types'
 import { getCart, clearCart } from './cart'
@@ -246,6 +247,11 @@ export async function createOrder(
         console.warn(`[Checkout] Product ${item.product_id} has no origin defined`)
       }
 
+      // Price the line from the live catalog price, the same way the order subtotal is.
+      // Never copy cart_items.unit_price_ngn: it is frozen when the item is added to the
+      // cart and never refreshed, so it goes stale whenever the catalog price changes.
+      const unitPriceNgn = Math.round(item.product.base_price_gbp * cart.exchangeRate * 100) / 100
+
       orderItems.push({
         order_id: (order as any).id,
         product_id: item.product_id,
@@ -256,8 +262,8 @@ export async function createOrder(
         product_origin: productOrigin, // Now accepts any string (TEXT column)
         selected_length: item.selected_length,
         quantity: item.quantity,
-        unit_price_ngn: item.unit_price_ngn,
-        total_price_ngn: item.unit_price_ngn * item.quantity,
+        unit_price_ngn: unitPriceNgn,
+        total_price_ngn: unitPriceNgn * item.quantity,
         fulfilled_quantity: 0,
         product_snapshot: {
           name: item.product.name,
@@ -608,6 +614,38 @@ export async function getExchangeRates() {
   } catch (error) {
     console.error('Error in getExchangeRates:', error)
     return []
+  }
+}
+
+const catalogProductIdsSchema = z.array(z.string().uuid()).max(100)
+
+// Get live catalog prices (GBP) keyed by product id, for checkout price verification.
+// Inactive or deleted products are not returned, so callers must treat a missing entry
+// as unpriceable. Returns null if the lookup fails.
+export async function getCatalogPricesGbp(productIds: string[]): Promise<Record<string, number> | null> {
+  const parsedIds = catalogProductIdsSchema.safeParse(productIds)
+  if (!parsedIds.success) {
+    console.error('[getCatalogPricesGbp] Invalid product ids:', parsedIds.error.flatten())
+    return null
+  }
+
+  try {
+    const supabase = await createClient()
+
+    const { data: products, error } = await supabase
+      .from('products')
+      .select('id, base_price_gbp')
+      .in('id', parsedIds.data)
+
+    if (error) {
+      console.error('Error fetching catalog prices:', error)
+      return null
+    }
+
+    return Object.fromEntries((products || []).map((product) => [product.id, Number(product.base_price_gbp)]))
+  } catch (error) {
+    console.error('Error in getCatalogPricesGbp:', error)
+    return null
   }
 }
 

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { getOrder, getExchangeRates } from '@/lib/actions/checkout'
+import { getOrder, getExchangeRates, getCatalogPricesGbp } from '@/lib/actions/checkout'
 import { createClient } from '@/lib/supabase/server'
+import { findPriceViolations, PRICE_DEVIATION_TOLERANCE } from '@/lib/utils/price-guard'
+import type { OrderItem } from '@/types/app.types'
 
 // Initialize Stripe with the secret key
 // Note: Let Stripe SDK use its default API version for compatibility
@@ -155,9 +157,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const orderItems: OrderItem[] = order?.order_items ?? []
+
+    if (orderItems.length === 0) {
+      console.error('[Stripe] Order has no items:', { orderId, orderNumber })
+      return NextResponse.json(
+        { error: 'Order has no items. Please contact support.' },
+        { status: 400 }
+      )
+    }
+
     // Create line items from order items with INTEGER MATH (in pence for GBP)
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
-      order?.order_items?.map((item: any) => {
+      orderItems.map((item: any) => {
         // Convert item price: kobo -> pence (integer math)
         const itemKobo = Math.round((item?.unit_price_ngn ?? 0) * 100)
         const itemPence = Math.round(itemKobo / ngnToGbpRate)
@@ -181,7 +193,46 @@ export async function POST(request: NextRequest) {
           },
           quantity: item?.quantity ?? 1,
         }
-      }) || []
+      })
+
+    // ========================================================================
+    // PRICE GUARD: never charge a unit price that disagrees with the catalog
+    // ========================================================================
+    // Order lines are persisted before this route runs and must not be trusted on
+    // their own: re-check every unit amount sent to Stripe against the live
+    // products.base_price_gbp and refuse to create the session if any line drifts.
+    const productIds = [...new Set(orderItems.map((item) => item.product_id).filter((id): id is string => Boolean(id)))]
+    const catalogPricesGbp: Record<string, number> | null =
+      productIds.length > 0 ? await getCatalogPricesGbp(productIds) : {}
+
+    if (!catalogPricesGbp) {
+      return NextResponse.json(
+        { error: 'Unable to verify prices right now. Please try again.' },
+        { status: 503 }
+      )
+    }
+
+    const priceViolations = findPriceViolations(
+      orderItems.map((item, index) => ({
+        productId: item.product_id,
+        productName: item.product_name,
+        unitAmountPence: lineItems[index]?.price_data?.unit_amount ?? NaN,
+      })),
+      catalogPricesGbp
+    )
+
+    if (priceViolations.length > 0) {
+      console.error(`[Stripe][PriceGuard] Rejected order ${orderNumber}: unit price deviates from catalog`, {
+        orderId,
+        ngnToGbpRate,
+        tolerance: PRICE_DEVIATION_TOLERANCE,
+        violations: priceViolations,
+      })
+      return NextResponse.json(
+        { error: 'Prices in your order have changed. Please review your cart and check out again.' },
+        { status: 409 }
+      )
+    }
 
     // Add shipping as a line item (in pence for GBP)
     if ((order?.shipping_cost_ngn ?? 0) > 0) {
