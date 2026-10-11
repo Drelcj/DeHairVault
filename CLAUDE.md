@@ -15,15 +15,30 @@ Multi-currency storefront, customer cart/checkout, admin panel for product/order
 - **Forms**: React Hook Form + Zod
 - **Payments**: Stripe (USD/GBP/EUR) + Paystack (NGN)
 - **Images**: Cloudinary (remote images only)
-- **Email**: Resend
+- **Email**: Resend — installed and `RESEND_API_KEY` is set, but nothing sends email yet
 - **Testing**: Vitest + jsdom + @testing-library/react
 - **Deploy**: Vercel + Vercel Analytics
+- **Git**: default branch is `master` (there is no `main`)
 
 ## Known Issues (verify before assuming they're still open)
-1. ~~CRITICAL: Stripe checkout~~ — **FIXED 2026-04-17**: `{CHECKOUT_SESSION_ID}` added to `success_url`; webhook endpoint was already correct. Requires `STRIPE_WEBHOOK_SECRET` set in Vercel env + webhook registered in Stripe dashboard (see webhook setup instructions below).
-2. ~~HIGH: Cart delete button (ghost delete)~~ — **FIXED 2026-04-17**: `008_cart_items_delete_policy.sql` adds the missing RLS DELETE policy. Apply this migration to Supabase before deploying.
+1. ~~CRITICAL: Stripe checkout~~ — **FIXED 2026-04-17**: `{CHECKOUT_SESSION_ID}` added to `success_url`. Requires `STRIPE_WEBHOOK_SECRET` set in Vercel env + webhook registered in Stripe dashboard at exactly `https://www.dehairvault.com/api/webhooks/stripe` (the non-www domain redirects and Stripe won't follow redirects).
+2. ~~HIGH: Cart delete button (ghost delete)~~ — **FIXED 2026-04-17**: `008_cart_items_delete_policy.sql` adds the missing RLS DELETE policy.
 3. HIGH: Admin product upload needs direct image upload (Cloudinary), not URL input — see `/app/api/admin/upload/`
 4. MEDIUM: Admin product listing needs Netflix-style video upload + HLS streaming (see `skills.md` SOP-18 for VideoPlayer implementation guide)
+5. HIGH: The test suite can't run — `vitest.setup.ts` imports `@testing-library/jest-dom`, which is not installed.
+6. Stock trigger gaps — see "Live Database State" below.
+
+## Live Database State (as of 2026-10-11)
+- **Migrations are unreliable.** Files in `supabase/migrations/` are intent, not fact — they don't match what was applied. `types/database.types.ts`, regenerated from the live DB, is the source of truth.
+  - Caveat: the types file was last regenerated 2026-09-17 and does **not** yet reflect the 2026-10-02 SQL below. Regenerate it before relying on those columns.
+- **SQL applied 2026-10-02**: `order_items.selected_length` is now nullable; `product_variants.price_override_gbp` now exists.
+- **Migration 012** (`012_drop_legacy_video_columns.sql`) was **never applied** — the legacy video columns still exist.
+- **Stock trigger**: the live trigger is `trg_update_stock_on_order`. It restores stock on `Cancelled` but **not** on `Refunded`, and it only adjusts variant stock — never `products.stock_quantity`.
+- The unused `dummy` Supabase edge function is still deployed.
+- **Exchange rates** failed silently from 2026-01-02 to 2026-09-17 (placeholder auth key). Fixed; they now update hourly.
+
+## Parked Work
+- **Klarna + geo-filtering**: branch `feature/klarna-geo` (commits `baddfb0`, `f1536f0`), awaiting CEO testing. Klarna is UK-only. Deploying it requires `STRIPE_PAYMENT_METHOD_CONFIGURATION_ID` in Vercel. The branch also adds `DEV_ALLOWED_ORIGINS` (`next.config.mjs`) for tunnel-based dev testing.
 
 ## Files to Read First for Any Task
 - `/lib/supabase/` — three Supabase client tiers (browser, server, service role)
@@ -35,7 +50,7 @@ Multi-currency storefront, customer cart/checkout, admin panel for product/order
 - `/app/api/webhooks/` — Stripe + Paystack webhook handlers
 - `/components/cart/` — cart drawer and item components
 - `/app/admin/` — admin panel pages
-- `/types/database.types.ts` — auto-generated schema types (source of truth for DB shape)
+- `/types/database.types.ts` — auto-generated from the live DB; source of truth for DB shape (not the migrations)
 - `/types/admin.ts` — admin-specific types
 
 > **AUDIT.md** contains a full architecture snapshot from 2026-04-16. Read it only when you need historical context on a specific subsystem. Do not re-generate it.
@@ -148,6 +163,6 @@ NEXT_PUBLIC_APP_URL
 npm run dev          # start dev server
 npm run build        # production build
 npm run lint         # ESLint
-npx vitest           # run tests
+npx vitest           # run tests (currently broken: @testing-library/jest-dom not installed)
 npx tsc --noEmit     # type-check without building (run before every PR)
 ```
