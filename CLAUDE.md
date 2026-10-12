@@ -29,9 +29,8 @@ Multi-currency storefront, customer cart/checkout, admin panel for product/order
 6. Stock trigger gaps — see "Live Database State" below.
 
 ## Live Database State (as of 2026-10-11)
-- **Migrations are unreliable.** Files in `supabase/migrations/` are intent, not fact — they don't match what was applied. `types/database.types.ts`, regenerated from the live DB, is the source of truth.
-  - Caveat: the types file was last regenerated 2026-09-17 and does **not** yet reflect the 2026-10-02 SQL below. Regenerate it before relying on those columns.
-- **SQL applied 2026-10-02**: `order_items.selected_length` is now nullable; `product_variants.price_override_gbp` now exists.
+- **Migrations are unreliable.** Files in `supabase/migrations/` are intent, not fact — they don't match what was applied. `types/database.types.ts`, regenerated from the live DB (last on 2026-10-12), is the source of truth.
+- **SQL applied 2026-10-02**: `order_items.selected_length` is now nullable; `product_variants.price_override_gbp` now exists. Both are reflected in the types file.
 - **Migration 012** (`012_drop_legacy_video_columns.sql`) was **never applied** — the legacy video columns still exist.
 - **Stock trigger**: the live trigger is `trg_update_stock_on_order`. It restores stock on `Cancelled` but **not** on `Refunded`, and it only adjusts variant stock — never `products.stock_quantity`.
 - The unused `dummy` Supabase edge function is still deployed.

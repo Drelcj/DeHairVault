@@ -295,7 +295,7 @@ export type Database = {
           product_snapshot: Json | null
           product_texture: string
           quantity: number
-          selected_length: number
+          selected_length: number | null
           total_price_ngn: number
           unit_price_ngn: number
           variant_id: string | null
@@ -313,7 +313,7 @@ export type Database = {
           product_snapshot?: Json | null
           product_texture: string
           quantity: number
-          selected_length: number
+          selected_length?: number | null
           total_price_ngn: number
           unit_price_ngn: number
           variant_id?: string | null
@@ -331,7 +331,7 @@ export type Database = {
           product_snapshot?: Json | null
           product_texture?: string
           quantity?: number
-          selected_length?: number
+          selected_length?: number | null
           total_price_ngn?: number
           unit_price_ngn?: number
           variant_id?: string | null
@@ -626,6 +626,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           length: number
+          price_override_gbp: number | null
           price_override_ngn: number | null
           product_id: string
           sku: string | null
@@ -638,6 +639,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           length: number
+          price_override_gbp?: number | null
           price_override_ngn?: number | null
           product_id: string
           sku?: string | null
@@ -650,6 +652,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           length?: number
+          price_override_gbp?: number | null
           price_override_ngn?: number | null
           product_id?: string
           sku?: string | null
