@@ -15,7 +15,7 @@ Multi-currency storefront, customer cart/checkout, admin panel for product/order
 - **Forms**: React Hook Form + Zod
 - **Payments**: Stripe (USD/GBP/EUR) + Paystack (NGN)
 - **Images**: Cloudinary (remote images only)
-- **Email**: Resend — installed and `RESEND_API_KEY` is set, but nothing sends email yet
+- **Email**: Resend — order confirmation + team new-order alert, sent from `lib/email/` when `updateOrderStatus()` marks an order paid. Exactly-once via an atomic claim on `orders.paid_at`. Preview / test-send at `/admin/email-test`. Needs `dehairvault.com` verified as a Resend sending domain.
 - **Testing**: Vitest + jsdom + @testing-library/react
 - **Deploy**: Vercel + Vercel Analytics
 - **Git**: default branch is `master` (there is no `main`)
