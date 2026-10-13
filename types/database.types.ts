@@ -699,6 +699,7 @@ export type Database = {
           is_featured: boolean | null
           is_new_arrival: boolean | null
           is_preorder_only: boolean | null
+          is_sold_out: boolean
           length_price_modifiers: Json | null
           low_stock_threshold: number | null
           meta_description: string | null
@@ -739,6 +740,7 @@ export type Database = {
           is_featured?: boolean | null
           is_new_arrival?: boolean | null
           is_preorder_only?: boolean | null
+          is_sold_out?: boolean
           length_price_modifiers?: Json | null
           low_stock_threshold?: number | null
           meta_description?: string | null
@@ -779,6 +781,7 @@ export type Database = {
           is_featured?: boolean | null
           is_new_arrival?: boolean | null
           is_preorder_only?: boolean | null
+          is_sold_out?: boolean
           length_price_modifiers?: Json | null
           low_stock_threshold?: number | null
           meta_description?: string | null

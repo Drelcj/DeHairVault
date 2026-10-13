@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getFeaturedProducts } from "@/lib/actions/products"
 import { PriceDisplay } from "@/components/price-display"
+import { isSoldOut } from "@/lib/utils/product"
 import type { Product } from "@/types/app.types"
 
 // Fallback images for when products don't have images
@@ -93,6 +94,11 @@ export async function FeaturedCollections() {
                         {product.is_new_arrival && (
                           <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full">
                             New
+                          </span>
+                        )}
+                        {isSoldOut(product) && (
+                          <span className="text-xs bg-foreground text-background px-2 py-0.5 rounded-full">
+                            Sold out
                           </span>
                         )}
                       </div>

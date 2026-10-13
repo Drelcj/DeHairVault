@@ -87,6 +87,11 @@ export async function addToCart(
       return { success: false, error: 'Product not found' }
     }
 
+    // Manually marked sold out by an admin (independent of stock_quantity)
+    if ((product as any).is_sold_out) {
+      return { success: false, error: `${(product as any).name} is sold out` }
+    }
+
     // Calculate price (in GBP)
     let unitPriceGbp = (product as any).base_price_gbp
     if (selectedLength && (product as any).length_price_modifiers) {
@@ -231,6 +236,9 @@ export async function updateCartItemQuantity(
 
     // Check stock quantity
     const product = (cartItem as any).product
+    if (product?.is_sold_out && quantity > (cartItem as any).quantity) {
+      return { success: false, error: `${product.name} is sold out` }
+    }
     if (product && quantity > product.stock_quantity) {
       return { 
         success: false, 

@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Package, AlertTriangle, TrendingDown, TrendingUp } from "lucide-react"
 import { formatPrice } from "@/lib/utils/currency"
 import { createServiceClient } from "@/lib/supabase/server"
+import { SoldOutToggle } from "../products/_components/sold-out-toggle"
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +20,7 @@ interface ProductInventory {
   base_price_gbp: number
   category: string
   is_active?: boolean
+  is_sold_out?: boolean
 }
 
 async function getInventoryStats() {
@@ -46,7 +48,7 @@ async function getInventoryStats() {
   // Get all products for inventory table
   const { data: allProducts } = await supabase
     .from('products')
-    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_gbp, category, is_active')
+    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_gbp, category, is_active, is_sold_out')
     .order('stock_quantity', { ascending: true })
     .limit(100)
 
@@ -214,12 +216,13 @@ export default async function InventoryPage() {
                 <th className="px-6 py-4 text-left font-medium text-muted-foreground">Unit Price</th>
                 <th className="px-6 py-4 text-left font-medium text-muted-foreground">Total Value</th>
                 <th className="px-6 py-4 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-6 py-4 text-left font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {stats.allProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8}className="px-6 py-12 text-center">
                     <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
                     <p className="mt-4 text-muted-foreground">No products found</p>
                   </td>
@@ -263,6 +266,14 @@ export default async function InventoryPage() {
                         stock={product.stock_quantity} 
                         threshold={product.low_stock_threshold}
                         isActive={product.is_active ?? true}
+                        isSoldOut={product.is_sold_out ?? false}
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <SoldOutToggle
+                        productId={product.id}
+                        productName={product.name}
+                        isSoldOut={product.is_sold_out ?? false}
                       />
                     </td>
                   </tr>
@@ -276,7 +287,7 @@ export default async function InventoryPage() {
   )
 }
 
-function StockStatusBadge({ stock, threshold, isActive }: { stock: number; threshold: number; isActive: boolean }) {
+function StockStatusBadge({ stock, threshold, isActive, isSoldOut }: { stock: number; threshold: number; isActive: boolean; isSoldOut: boolean }) {
   if (!isActive) {
     return (
       <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
@@ -285,6 +296,14 @@ function StockStatusBadge({ stock, threshold, isActive }: { stock: number; thres
     )
   }
   
+  if (isSoldOut) {
+    return (
+      <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+        Sold Out
+      </span>
+    )
+  }
+
   if (stock === 0) {
     return (
       <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">

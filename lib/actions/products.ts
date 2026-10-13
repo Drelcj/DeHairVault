@@ -1,6 +1,9 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/auth/session'
 import { deleteProductVideo } from '@/lib/actions/video-upload'
 import type { Product, HairTexture } from '@/types/app.types'
 
@@ -335,5 +338,60 @@ export async function deleteProduct(productId: string): Promise<{ success: boole
   } catch (error) {
     console.error('[deleteProduct] Error:', error)
     return { success: false, error: 'Failed to delete product' }
+  }
+}
+
+const setProductSoldOutSchema = z.object({
+  productId: z.string().uuid(),
+  soldOut: z.boolean(),
+})
+
+/**
+ * Mark a product sold out / back in stock (admin only).
+ * Only flips is_sold_out — stock_quantity and is_active are left untouched,
+ * so the product stays visible on the storefront and keeps its real stock count.
+ */
+export async function setProductSoldOut(
+  productId: string,
+  soldOut: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const parsed = setProductSoldOutSchema.safeParse({ productId, soldOut })
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid request' }
+  }
+
+  try {
+    const session = await getSessionUser()
+    if (!session) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const role = session.profile?.role
+    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+      return { success: false, error: 'Forbidden - Admin access required' }
+    }
+
+    const serviceClient = createServiceClient()
+    const { data, error } = await serviceClient
+      .from('products')
+      .update({ is_sold_out: parsed.data.soldOut })
+      .eq('id', parsed.data.productId)
+      .select('id')
+      .maybeSingle()
+
+    if (error) {
+      console.error('[setProductSoldOut] Error:', error)
+      return { success: false, error: error.message }
+    }
+
+    if (!data) {
+      return { success: false, error: 'Product not found' }
+    }
+
+    revalidatePath('/', 'layout')
+    return { success: true }
+  } catch (error) {
+    console.error('[setProductSoldOut] Error:', error)
+    return { success: false, error: 'Failed to update product' }
   }
 }

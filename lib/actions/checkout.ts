@@ -88,6 +88,12 @@ export async function createOrder(
 
     // Check stock availability for all items
     for (const item of cart.items) {
+      if (item.product.is_sold_out) {
+        return {
+          success: false,
+          error: `${item.product.name} is sold out. Please remove it from your cart to continue.`,
+        }
+      }
       if (item.product.track_inventory && !item.product.allow_backorder) {
         if (item.product.stock_quantity < item.quantity) {
           return {

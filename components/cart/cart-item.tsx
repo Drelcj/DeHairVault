@@ -143,7 +143,7 @@ export function CartItem({ item }: CartItemProps) {
             size="icon"
             className="h-6 w-6"
             onClick={() => handleUpdateQuantity(item.quantity + 1)}
-            disabled={isUpdating || item.quantity >= item.product.stock_quantity}
+            disabled={isUpdating || item.product.is_sold_out === true || item.quantity >= item.product.stock_quantity}
           >
             <Plus className="h-3 w-3" />
           </Button>
@@ -158,7 +158,9 @@ export function CartItem({ item }: CartItemProps) {
           </Button>
         </div>
 
-        {item.quantity >= item.product.stock_quantity && (
+        {item.product.is_sold_out ? (
+          <p className="text-xs text-destructive">Sold out — remove to check out</p>
+        ) : item.quantity >= item.product.stock_quantity && (
           <p className="text-xs text-muted-foreground">Max quantity reached</p>
         )}
       </div>

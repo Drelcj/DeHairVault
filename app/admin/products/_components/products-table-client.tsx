@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { SoldOutToggle } from './sold-out-toggle'
 
 interface Product {
   id: string
@@ -24,6 +25,7 @@ interface Product {
   base_price_gbp: number
   stock_quantity: number
   is_active: boolean
+  is_sold_out: boolean
   category: string
   images: string[] | null
 }
@@ -122,18 +124,30 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-                          product.is_active
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                        }`}
-                      >
-                        {product.is_active ? 'Active' : 'Inactive'}
-                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                            product.is_active
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                          }`}
+                        >
+                          {product.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                        {product.is_sold_out && (
+                          <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                            Sold out
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
+                        <SoldOutToggle
+                          productId={product.id}
+                          productName={product.name}
+                          isSoldOut={product.is_sold_out}
+                        />
                         <Link
                           href={`/admin/products/${product.id}/edit`}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
@@ -200,8 +214,19 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
                   >
                     {product.is_active ? 'Active' : 'Inactive'}
                   </span>
+                  {product.is_sold_out && (
+                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                      Sold out
+                    </span>
+                  )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
+                  <SoldOutToggle
+                    productId={product.id}
+                    productName={product.name}
+                    isSoldOut={product.is_sold_out}
+                    className="w-full justify-center"
+                  />
                   <Link
                     href={`/admin/products/${product.id}/edit`}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors w-full justify-center"
