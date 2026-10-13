@@ -15,7 +15,7 @@ async function getProducts(searchQuery?: string, page: number = 1, pageSize: num
   
   let query = supabase
     .from('products')
-    .select('id, name, slug, base_price_gbp, stock_quantity, is_active, category, images, created_at', { count: 'exact' })
+    .select('id, name, slug, base_price_gbp, stock_quantity, is_active, is_sold_out, category, images, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 

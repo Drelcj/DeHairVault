@@ -8,6 +8,7 @@ import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { cn } from '@/lib/utils'
+import { isSoldOut } from '@/lib/utils/product'
 import { HlsVideoPlayer } from '@/components/ui/hls-video-player'
 import { addToCart } from '@/lib/actions/cart'
 import { useCart } from '@/contexts/cart-context'
@@ -47,7 +48,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   // Defensive: ensure arrays are never null/undefined
   const availableLengths = product.available_lengths ?? []
   const productImages = product.images ?? []
-  
+  const soldOut = isSoldOut(product)
+
   const [selectedLength, setSelectedLength] = useState<number | null>(
     availableLengths[0] ?? null
   )
@@ -186,6 +188,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 </p>
               )}
             </div>
+
+            {soldOut && (
+              <span className="mt-4 inline-block px-3 py-1 bg-foreground text-background text-xs font-medium uppercase tracking-wider rounded-full">
+                Sold out
+              </span>
+            )}
           </div>
 
           {/* Short Description */}
@@ -219,6 +227,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           )}
 
           {/* Quantity */}
+          {!soldOut && (
           <div>
             <label className="text-sm font-medium text-foreground mb-3 block">
               Quantity
@@ -252,16 +261,17 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               )}
             </div>
           </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3">
             <Button
               className="flex-1 h-12 bg-gradient-to-r from-accent to-primary hover:opacity-90 text-accent-foreground font-medium gap-2"
-              disabled={product.stock_quantity === 0 || isAddingToCart}
+              disabled={soldOut || isAddingToCart}
               onClick={handleAddToCart}
             >
               <ShoppingBag className="h-5 w-5" />
-              {isAddingToCart ? 'Adding...' : product.stock_quantity > 0 ? 'Add to Cart' : 'Out of Stock'}
+              {soldOut ? 'Sold Out' : isAddingToCart ? 'Adding...' : 'Add to Cart'}
             </Button>
             <Button
               variant="outline"

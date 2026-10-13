@@ -111,6 +111,15 @@ export function isInStock(product: Product): boolean {
 }
 
 /**
+ * Check if product should show as sold out on the storefront
+ * @param product - Product object
+ * @returns True if an admin marked it sold out, or there is no stock left to add to cart
+ */
+export function isSoldOut(product: Pick<Product, 'is_sold_out' | 'stock_quantity'>): boolean {
+  return product.is_sold_out === true || (product.stock_quantity ?? 0) <= 0;
+}
+
+/**
  * Check if product is low stock
  * @param product - Product object
  * @returns Boolean indicating if product is low stock

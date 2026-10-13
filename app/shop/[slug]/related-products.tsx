@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useCurrency } from '@/contexts/currency-context'
+import { isSoldOut } from '@/lib/utils/product'
 import type { Product, HairOrigin } from '@/types/app.types'
 
 // Map origins to display names
@@ -75,6 +76,11 @@ export function RelatedProducts({ products, currentOrigin }: RelatedProductsProp
               {product.compare_at_price_gbp && product.compare_at_price_gbp > product.base_price_gbp && (
                 <div className="absolute top-3 right-3 px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
                   Sale
+                </div>
+              )}
+              {isSoldOut(product) && (
+                <div className="absolute bottom-3 left-3 px-2 py-1 bg-foreground text-background text-xs font-medium uppercase tracking-wider rounded-full">
+                  Sold out
                 </div>
               )}
             </div>

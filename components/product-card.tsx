@@ -8,6 +8,7 @@ import { ShoppingBag, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ImageCarousel } from "@/components/ui/image-carousel"
 import { cn } from "@/lib/utils"
+import { isSoldOut } from "@/lib/utils/product"
 import { addToCart } from "@/lib/actions/cart"
 import { useCart } from "@/contexts/cart-context"
 import { useCurrency } from "@/contexts/currency-context"
@@ -60,6 +61,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   // Defensive: ensure arrays are never null/undefined
   const productImages = product.images ?? []
   const availableLengths = product.available_lengths ?? []
+  const soldOut = isSoldOut(product)
 
   // Get the display image (thumbnail or first image)
   const imageUrl = product.thumbnail_url || productImages[0] || ''
@@ -155,19 +157,28 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-            {/* Featured Badge */}
-            {product.is_featured && (
-              <div className="absolute top-4 left-4 px-3 py-1 bg-accent text-accent-foreground text-xs font-medium uppercase tracking-wider rounded-full">
-                Featured
-              </div>
-            )}
+            <div className="absolute top-4 left-4 flex flex-col items-start gap-2">
+              {/* Sold Out Badge */}
+              {soldOut && (
+                <div className="px-3 py-1 bg-foreground text-background text-xs font-medium uppercase tracking-wider rounded-full">
+                  Sold out
+                </div>
+              )}
 
-            {/* New Arrival Badge */}
-            {product.is_new_arrival && !product.is_featured && (
-              <div className="absolute top-4 left-4 px-3 py-1 bg-primary text-primary-foreground text-xs font-medium uppercase tracking-wider rounded-full">
-                New
-              </div>
-            )}
+              {/* Featured Badge */}
+              {product.is_featured && (
+                <div className="px-3 py-1 bg-accent text-accent-foreground text-xs font-medium uppercase tracking-wider rounded-full">
+                  Featured
+                </div>
+              )}
+
+              {/* New Arrival Badge */}
+              {product.is_new_arrival && !product.is_featured && (
+                <div className="px-3 py-1 bg-primary text-primary-foreground text-xs font-medium uppercase tracking-wider rounded-full">
+                  New
+                </div>
+              )}
+            </div>
 
             {/* Wishlist Button */}
             <button
@@ -195,11 +206,11 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             >
               <Button
                 onClick={handleAddToCart}
-                disabled={isAddingToCart}
+                disabled={isAddingToCart || soldOut}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 rounded-lg font-medium"
               >
                 <ShoppingBag className="h-4 w-4" />
-                {isAddingToCart ? 'Adding...' : 'Add to Bag'}
+                {soldOut ? 'Sold Out' : isAddingToCart ? 'Adding...' : 'Add to Bag'}
               </Button>
             </div>
           </div>
