@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Store,
   LogOut,
+  Mail,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ const navItems = [
   { href: '/admin/inventory', label: 'Inventory', icon: Boxes },
   { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/returns', label: 'Returns', icon: RotateCcw },
+  { href: '/admin/email-test', label: 'Order Emails', icon: Mail },
 ]
 
 export function AdminSidebar({ userName }: AdminSidebarProps) {

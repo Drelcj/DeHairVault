@@ -6,6 +6,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { OrderInsert, OrderItemInsert, OrderType, OrderStatus } from '@/types/app.types'
 import { getCart, clearCart } from './cart'
 import { calculateShippingCost } from '@/lib/services/shipping'
+import { sendOrderPaidEmails } from '@/lib/email/send-order-emails'
 
 export interface CheckoutFormData {
   // Customer info
@@ -496,6 +497,18 @@ export async function updateOrderStatus(
     // Use service role client for webhook operations (no user session available)
     const serviceSupabase = createServiceClient()
 
+    // The webhook and the verify route both land here for the same payment. Note whether the
+    // order was already paid so the confirmation emails only go out on the real transition.
+    let wasAlreadyPaid = false
+    if (paymentStatus === 'paid') {
+      const { data: priorOrder } = await serviceSupabase
+        .from('orders')
+        .select('payment_status')
+        .eq('id', orderId)
+        .maybeSingle()
+      wasAlreadyPaid = priorOrder?.payment_status === 'paid'
+    }
+
     const updateData: any = {
       status,
       payment_status: paymentStatus,
@@ -548,6 +561,11 @@ export async function updateOrderStatus(
           }
         }
       }
+    }
+
+    if (paymentStatus === 'paid' && !wasAlreadyPaid) {
+      // Sends at most once per order and never throws: a failed email is only logged
+      await sendOrderPaidEmails(orderId)
     }
 
     revalidatePath('/admin/orders')
