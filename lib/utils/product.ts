@@ -119,20 +119,40 @@ export function isSoldOut(product: Pick<Product, 'is_sold_out' | 'stock_quantity
   return product.is_sold_out === true || (product.stock_quantity ?? 0) <= 0;
 }
 
+// Used when a product has no low_stock_threshold set
+export const DEFAULT_LOW_STOCK_THRESHOLD = 5;
+
+type StockFields = {
+  stock_quantity: number | null;
+  low_stock_threshold: number | null;
+  track_inventory?: boolean | null;
+};
+
 /**
- * Check if product is low stock
- * @param product - Product object
+ * Check if product is low stock: still in stock, but at or below its own threshold.
+ * This is the single definition used by the storefront and every admin page.
+ * @param product - Product (or the stock fields of one)
  * @returns Boolean indicating if product is low stock
  */
-export function isLowStock(product: Product): boolean {
-  if (!product.track_inventory) {
+export function isLowStock(product: StockFields): boolean {
+  if (product.track_inventory === false) {
     return false;
   }
 
-  return (
-    product.stock_quantity > 0 &&
-    product.stock_quantity <= product.low_stock_threshold
-  );
+  const stock = product.stock_quantity ?? 0;
+  const threshold = product.low_stock_threshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
+  return stock > 0 && stock <= threshold;
+}
+
+/**
+ * Check if a tracked product has no stock left
+ */
+export function isOutOfStock(product: StockFields): boolean {
+  if (product.track_inventory === false) {
+    return false;
+  }
+
+  return (product.stock_quantity ?? 0) <= 0;
 }
 
 /**

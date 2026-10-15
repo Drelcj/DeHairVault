@@ -2,10 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { VALID_TRANSITIONS } from '@/lib/admin/order-transitions'
 
 interface OrderStatusActionsProps {
   orderId: string
@@ -22,41 +25,38 @@ const ORDER_STATUSES = [
   { value: 'REFUNDED', label: 'Refunded' },
 ]
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PROCESSING', 'CANCELLED'],
-  PROCESSING: ['SHIPPED'],
-  SHIPPED: ['DELIVERED'],
-  DELIVERED: ['REFUNDED'],
-  CANCELLED: [],
-  REFUNDED: [],
-}
-
 export function OrderStatusActions({ orderId, currentStatus }: OrderStatusActionsProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [newStatus, setNewStatus] = useState(currentStatus)
   const [trackingNumber, setTrackingNumber] = useState('')
   const [trackingUrl, setTrackingUrl] = useState('')
-  const [adminNotes, setAdminNotes] = useState('')
+  const [adminNote, setAdminNote] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const allowedStatuses = VALID_TRANSITIONS[currentStatus] || []
 
   const handleUpdate = async () => {
-    if (!newStatus || newStatus === currentStatus) return
+    if (!newStatus || newStatus === currentStatus) {
+      toast.error('Choose a new status first')
+      return
+    }
     setIsLoading(true)
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, tracking_number: trackingNumber, tracking_url: trackingUrl, admin_notes: adminNotes }),
+        body: JSON.stringify({ status: newStatus, tracking_number: trackingNumber, tracking_url: trackingUrl, admin_note: adminNote }),
       })
-      if (!res.ok) throw new Error('Failed to update status')
+      const result = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(result?.error || `Failed to update status (${res.status})`)
+      toast.success(`Order moved to ${newStatus}`)
       setIsOpen(false)
+      setAdminNote('')
       router.refresh()
     } catch (err) {
       console.error(err)
+      toast.error(err instanceof Error ? err.message : 'Failed to update status')
     } finally {
       setIsLoading(false)
     }
@@ -78,16 +78,17 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
                 <div className="space-y-3">
                   <div>
                     <Label className="text-xs font-medium mb-1.5">New Status</Label>
-                    <select
-                      value={newStatus}
-                      onChange={(e) => setNewStatus(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
-                    >
-                      <option value={currentStatus}>{currentStatus}</option>
-                      {allowedStatuses.map(s => (
-                        <option key={s} value={s}>{ORDER_STATUSES.find(st => st.value === s)?.label || s}</option>
-                      ))}
-                    </select>
+                    <Select value={newStatus} onValueChange={setNewStatus}>
+                      <SelectTrigger className="w-full border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={currentStatus}>{currentStatus}</SelectItem>
+                        {allowedStatuses.map(s => (
+                          <SelectItem key={s} value={s}>{ORDER_STATUSES.find(st => st.value === s)?.label || s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   {newStatus === 'SHIPPED' && (
                     <>
@@ -112,16 +113,18 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
                     </>
                   )}
                   <div>
-                    <Label className="text-xs font-medium">Admin Notes</Label>
+                    <Label className="text-xs font-medium">Admin Note (optional, added to the notes log)</Label>
                     <Textarea
-                      placeholder="Internal notes..."
-                      value={adminNotes}
-                      onChange={(e) => setAdminNotes(e.target.value)}
+                      placeholder="Internal note..."
+                      value={adminNote}
+                      onChange={(e) => setAdminNote(e.target.value)}
                       className="text-sm border-border"
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleUpdate} disabled={isLoading} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">Save</Button>
+                    <Button onClick={handleUpdate} disabled={isLoading} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
+                      {isLoading ? 'Saving...' : 'Save'}
+                    </Button>
                     <Button onClick={() => setIsOpen(false)} variant="outline" className="border-border">Cancel</Button>
                   </div>
                 </div>

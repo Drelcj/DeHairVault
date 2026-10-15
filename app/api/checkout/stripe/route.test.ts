@@ -14,6 +14,8 @@ vi.mock('@/lib/actions/checkout', () => ({
   getCatalogPricesGbp: mocks.getCatalogPricesGbp,
 }))
 
+vi.mock('@/lib/orders/payment-outcomes', () => ({ recordCheckoutStarted: vi.fn().mockResolvedValue({ success: true, updated: true }) }))
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },

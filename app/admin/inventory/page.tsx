@@ -3,6 +3,7 @@ import { Package, AlertTriangle, TrendingDown, TrendingUp } from "lucide-react"
 import { formatPrice } from "@/lib/utils/currency"
 import { createServiceClient } from "@/lib/supabase/server"
 import { SoldOutToggle } from "../products/_components/sold-out-toggle"
+import { DEFAULT_LOW_STOCK_THRESHOLD, isLowStock, isOutOfStock } from "@/lib/utils/product"
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +15,9 @@ interface ProductInventory {
   id: string
   name: string
   slug: string
-  stock_quantity: number
-  low_stock_threshold: number
+  stock_quantity: number | null
+  low_stock_threshold: number | null
+  track_inventory: boolean | null
   images: string[] | null
   base_price_gbp: number
   category: string
@@ -25,49 +27,28 @@ interface ProductInventory {
 
 async function getInventoryStats() {
   const supabase = createServiceClient()
-  
-  // Get total products
-  const { count: totalProducts } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
 
-  // Get low stock products (stock_quantity <= low_stock_threshold)
-  const { data: lowStockProducts } = await supabase
+  // One read of every product; low / out of stock use the shared rules in lib/utils/product
+  const { data } = await supabase
     .from('products')
-    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_gbp, category')
-    .lte('stock_quantity', 10)
-    .gt('stock_quantity', 0)
+    .select('id, name, slug, stock_quantity, low_stock_threshold, track_inventory, images, base_price_gbp, category, is_active, is_sold_out')
     .order('stock_quantity', { ascending: true })
 
-  // Get out of stock products
-  const { data: outOfStockProducts } = await supabase
-    .from('products')
-    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_gbp, category')
-    .eq('stock_quantity', 0)
+  const products = (data || []) as ProductInventory[]
+  const lowStockProducts = products.filter(isLowStock)
+  const outOfStockProducts = products.filter(isOutOfStock)
 
-  // Get all products for inventory table
-  const { data: allProducts } = await supabase
-    .from('products')
-    .select('id, name, slug, stock_quantity, low_stock_threshold, images, base_price_gbp, category, is_active, is_sold_out')
-    .order('stock_quantity', { ascending: true })
-    .limit(100)
-
-  // Calculate total inventory value
-  const { data: inventoryValue } = await supabase
-    .from('products')
-    .select('stock_quantity, base_price_gbp')
-
-  const products = inventoryValue as { stock_quantity: number; base_price_gbp: number }[] | null
-  const totalValue = products?.reduce((sum, p) => sum + (p.stock_quantity * p.base_price_gbp), 0) || 0
+  // Stock value at the GBP base price
+  const totalValue = products.reduce((sum, p) => sum + (p.stock_quantity ?? 0) * Number(p.base_price_gbp || 0), 0)
 
   return {
-    totalProducts: totalProducts || 0,
-    lowStockCount: (lowStockProducts as ProductInventory[] | null)?.length || 0,
-    outOfStockCount: (outOfStockProducts as ProductInventory[] | null)?.length || 0,
+    totalProducts: products.length,
+    lowStockCount: lowStockProducts.length,
+    outOfStockCount: outOfStockProducts.length,
     totalValue,
-    lowStockProducts: (lowStockProducts || []) as ProductInventory[],
-    outOfStockProducts: (outOfStockProducts || []) as ProductInventory[],
-    allProducts: (allProducts || []) as ProductInventory[],
+    lowStockProducts,
+    outOfStockProducts,
+    allProducts: products.slice(0, 100),
   }
 }
 
@@ -107,7 +88,7 @@ export default async function InventoryPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Inventory Value</p>
-              <p className="text-2xl font-semibold">{formatPrice(stats.totalValue, 'NGN')}</p>
+              <p className="text-2xl font-semibold">{formatPrice(stats.totalValue, 'GBP')}</p>
             </div>
           </div>
         </div>
@@ -151,7 +132,7 @@ export default async function InventoryPage() {
                 {stats.outOfStockProducts.slice(0, 5).map((product) => (
                   <div key={product.id} className="flex items-center justify-between">
                     <Link 
-                      href={`/admin/products/${product.slug}/edit`}
+                      href={`/admin/products/${product.id}/edit`}
                       className="text-sm font-medium text-red-900 dark:text-red-100 hover:underline"
                     >
                       {product.name}
@@ -179,7 +160,7 @@ export default async function InventoryPage() {
                 {stats.lowStockProducts.slice(0, 5).map((product) => (
                   <div key={product.id} className="flex items-center justify-between">
                     <Link 
-                      href={`/admin/products/${product.slug}/edit`}
+                      href={`/admin/products/${product.id}/edit`}
                       className="text-sm font-medium text-yellow-900 dark:text-yellow-100 hover:underline"
                     >
                       {product.name}
@@ -232,7 +213,7 @@ export default async function InventoryPage() {
                   <tr key={product.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4">
                       <Link 
-                        href={`/admin/products/${product.slug}/edit`}
+                        href={`/admin/products/${product.id}/edit`}
                         className="font-medium text-foreground hover:text-accent"
                       >
                         {product.name}
@@ -243,28 +224,28 @@ export default async function InventoryPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`font-medium ${
-                        product.stock_quantity === 0 
-                          ? 'text-red-600 dark:text-red-400' 
-                          : product.stock_quantity <= product.low_stock_threshold
+                        isOutOfStock(product)
+                          ? 'text-red-600 dark:text-red-400'
+                          : isLowStock(product)
                             ? 'text-yellow-600 dark:text-yellow-400'
                             : 'text-foreground'
                       }`}>
-                        {product.stock_quantity}
+                        {product.stock_quantity ?? 0}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">
-                      {product.low_stock_threshold}
+                      {product.low_stock_threshold ?? DEFAULT_LOW_STOCK_THRESHOLD}
                     </td>
                     <td className="px-6 py-4">
                       {formatPrice(product.base_price_gbp, 'GBP')}
                     </td>
                     <td className="px-6 py-4 font-medium">
-                      {formatPrice(product.stock_quantity * product.base_price_gbp, 'GBP')}
+                      {formatPrice((product.stock_quantity ?? 0) * product.base_price_gbp, 'GBP')}
                     </td>
                     <td className="px-6 py-4">
-                      <StockStatusBadge 
-                        stock={product.stock_quantity} 
-                        threshold={product.low_stock_threshold}
+                      <StockStatusBadge
+                        isLow={isLowStock(product)}
+                        isOut={isOutOfStock(product)}
                         isActive={product.is_active ?? true}
                         isSoldOut={product.is_sold_out ?? false}
                       />
@@ -287,7 +268,7 @@ export default async function InventoryPage() {
   )
 }
 
-function StockStatusBadge({ stock, threshold, isActive, isSoldOut }: { stock: number; threshold: number; isActive: boolean; isSoldOut: boolean }) {
+function StockStatusBadge({ isLow, isOut, isActive, isSoldOut }: { isLow: boolean; isOut: boolean; isActive: boolean; isSoldOut: boolean }) {
   if (!isActive) {
     return (
       <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
@@ -304,7 +285,7 @@ function StockStatusBadge({ stock, threshold, isActive, isSoldOut }: { stock: nu
     )
   }
 
-  if (stock === 0) {
+  if (isOut) {
     return (
       <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
         Out of Stock
@@ -312,7 +293,7 @@ function StockStatusBadge({ stock, threshold, isActive, isSoldOut }: { stock: nu
     )
   }
   
-  if (stock <= threshold) {
+  if (isLow) {
     return (
       <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
         Low Stock

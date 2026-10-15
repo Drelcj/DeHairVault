@@ -25,7 +25,7 @@ Multi-currency storefront, customer cart/checkout, admin panel for product/order
 2. ~~HIGH: Cart delete button (ghost delete)~~ — **FIXED 2026-04-17**: `008_cart_items_delete_policy.sql` adds the missing RLS DELETE policy.
 3. HIGH: Admin product upload needs direct image upload (Cloudinary), not URL input — see `/app/api/admin/upload/`
 4. MEDIUM: Admin product listing needs Netflix-style video upload + HLS streaming (see `skills.md` SOP-18 for VideoPlayer implementation guide)
-5. HIGH: The test suite can't run — `vitest.setup.ts` imports `@testing-library/jest-dom`, which is not installed.
+5. ~~HIGH: test suite can't run~~ — **FIXED 2026-10-15**: `@testing-library/jest-dom` installed. On Windows the default forks pool can time out starting workers; use `npx vitest run --pool=threads`.
 6. Stock trigger gaps — see "Live Database State" below.
 
 ## Live Database State (as of 2026-10-11)
@@ -132,6 +132,7 @@ RESEND_API_KEY
 NEXT_PUBLIC_APP_URL
 ```
 Optional: `ORDER_ALERT_RECIPIENTS` — comma-separated new-order alert recipients; overrides the defaults in `lib/email/resend.ts`.
+`CRON_SECRET` — required in Vercel for the daily `/api/cron/expire-pending-orders` job (`vercel.json`); Vercel sends it as `Authorization: Bearer <secret>`.
 
 ## Performance & Scalability
 
@@ -163,6 +164,6 @@ Optional: `ORDER_ALERT_RECIPIENTS` — comma-separated new-order alert recipient
 npm run dev          # start dev server
 npm run build        # production build
 npm run lint         # ESLint
-npx vitest           # run tests (currently broken: @testing-library/jest-dom not installed)
+npx vitest run --pool=threads   # run tests (forks pool can time out on Windows)
 npx tsc --noEmit     # type-check without building (run before every PR)
 ```
