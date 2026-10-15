@@ -287,6 +287,9 @@ export async function POST(request: NextRequest) {
       provider: 'stripe',
       checkoutSessionId: session.id,
       livemode: session.livemode,
+      // What the customer is asked to pay, for the abandoned-checkouts view
+      checkoutAmount: session.amount_total != null ? session.amount_total / 100 : null,
+      checkoutCurrency: session.currency?.toUpperCase() ?? 'GBP',
     })
 
     return NextResponse.json({ url: session.url })

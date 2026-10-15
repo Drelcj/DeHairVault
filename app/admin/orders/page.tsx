@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ShoppingCart, Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import { formatPrice } from "@/lib/utils/currency"
 import { createServiceClient } from "@/lib/supabase/server"
-import { getChargedAmount, getPaymentReference, isTestOrder } from "@/lib/admin/order-metrics"
+import { getChargedAmount, getPaymentReference, isClosedUnpaidCheckout, isTestOrder } from "@/lib/admin/order-metrics"
 import {
   fetchOrderSummaries,
   isAwaitingShipment,
@@ -28,6 +28,7 @@ const STATUS_TABS = [
   { value: 'SHIPPED', label: 'Shipped' },
   { value: 'DELIVERED', label: 'Delivered' },
   { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'ABANDONED', label: 'Abandoned / Expired' },
   { value: 'REFUNDED', label: 'Refunded' },
   { value: 'TEST', label: 'Test' },
 ] as const
@@ -39,6 +40,9 @@ function matchesTab(order: OrderSummary, tab: string): boolean {
   if (isTestOrder(order)) return false
   if (tab === 'AWAITING_SHIPMENT') return isAwaitingShipment(order)
   if (tab === 'PENDING') return isUnpaidCheckout(order)
+  // Real cancellations only; unpaid checkouts closed as failed / expired / abandoned have their own tab
+  if (tab === 'ABANDONED') return isClosedUnpaidCheckout(order)
+  if (tab === 'CANCELLED') return order.status === 'CANCELLED' && !isClosedUnpaidCheckout(order)
   return order.status === tab
 }
 

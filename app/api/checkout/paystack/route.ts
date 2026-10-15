@@ -155,6 +155,9 @@ export async function POST(request: NextRequest) {
       provider: 'paystack',
       paystackReference: data.data.reference,
       livemode: !process.env.PAYSTACK_SECRET_KEY?.startsWith('sk_test_'),
+      // What the customer is asked to pay, for the abandoned-checkouts view
+      checkoutAmount: amountInKobo / 100,
+      checkoutCurrency: 'NGN',
     })
 
     return NextResponse.json({

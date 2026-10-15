@@ -28,12 +28,15 @@ export function getPaymentMetadata(order: OrderPaymentFields): PaymentMetadata |
 }
 
 /**
- * True when the order was placed against a provider's test mode: a Stripe cs_test_ session,
- * livemode false, or a Paystack transaction on the test domain.
+ * True when the order was placed against a provider's test mode (a Stripe cs_test_ session,
+ * livemode false, or a Paystack transaction on the test domain), or is a live-mode payment
+ * the team made to test checkout (payment_metadata.internalTest). Both are treated the same:
+ * excluded from every figure and the abandoned list, shown with a TEST badge.
  */
 export function isTestOrder(order: OrderPaymentFields): boolean {
   const meta = getPaymentMetadata(order)
   if (!meta) return false
+  if (meta.internalTest === true) return true
   if (meta.livemode === false) return true
   if (meta.paystackDomain === 'test') return true
   const sessionIds = [meta.stripeSessionId, meta.checkoutSessionId]
@@ -52,6 +55,38 @@ export function getChargedAmount(order: OrderPaymentFields): { amount: number; c
   if (typeof meta.amountTotal === 'number') return { amount: meta.amountTotal / 100, currency }
   if (typeof meta.amount === 'number') return { amount: meta.amount, currency }
   return null
+}
+
+/**
+ * What the customer was (or would have been) asked to pay, in the provider's currency.
+ * Uses the charged amount, then the amount recorded when checkout started. Older orders have
+ * neither, so it is rebuilt the way the checkout routes do: Stripe charges GBP converted from
+ * total_ngn at the order's stored NGN rate (exchange_rate); Paystack charges total_ngn in NGN.
+ * total_display_currency is not used: it is always total_ngn / NGN rate (a GBP figure) but is
+ * labelled with whatever display_currency the shopper had selected.
+ */
+export function getCheckoutValue(
+  order: OrderPaymentFields & { payment_method: string | null; total_ngn: number; exchange_rate: number | null }
+): { amount: number; currency: string } {
+  const charged = getChargedAmount(order)
+  if (charged) return charged
+
+  const meta = getPaymentMetadata(order)
+  if (meta && typeof meta.checkoutAmount === 'number' && typeof meta.checkoutCurrency === 'string') {
+    return { amount: meta.checkoutAmount, currency: meta.checkoutCurrency.toUpperCase() }
+  }
+
+  const rate = Number(order.exchange_rate)
+  if (getPaymentProvider(order) === 'stripe' && rate > 0) {
+    const pence = Math.round(Math.round(Number(order.total_ngn) * 100) / rate)
+    return { amount: pence / 100, currency: 'GBP' }
+  }
+  return { amount: Number(order.total_ngn), currency: 'NGN' }
+}
+
+/** Unpaid checkouts that were closed (failed, expired, abandoned), as opposed to real cancellations. */
+export function isClosedUnpaidCheckout(order: { status: string | null; payment_status: string | null }): boolean {
+  return order.status === 'CANCELLED' && ['failed', 'expired', 'abandoned'].includes(order.payment_status ?? '')
 }
 
 /** Sum charged amounts per currency, e.g. { GBP: 1360, NGN: 450000 }. */

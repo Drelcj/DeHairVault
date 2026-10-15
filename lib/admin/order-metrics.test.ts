@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   appendAdminNote,
   getChargedAmount,
+  getCheckoutValue,
+  isClosedUnpaidCheckout,
   getPaymentReference,
   getUnpaidOutcome,
   isTestOrder,
@@ -26,6 +28,10 @@ describe('isTestOrder', () => {
     expect(isTestOrder(order({ paystackReference: 'DHV-1', paystackDomain: 'test' }))).toBe(true)
   })
 
+  it('flags live-mode payments the team made to test checkout', () => {
+    expect(isTestOrder(order({ stripeSessionId: 'cs_live_abc', livemode: true, internalTest: true }))).toBe(true)
+  })
+
   it('treats live and unknown orders as live', () => {
     expect(isTestOrder(order({ stripeSessionId: 'cs_live_abc', livemode: true }))).toBe(false)
     expect(isTestOrder(order({ paystackReference: 'DHV-1' }))).toBe(false)
@@ -42,6 +48,35 @@ describe('getChargedAmount', () => {
   it('returns null without a provider record instead of falling back to total_ngn', () => {
     expect(getChargedAmount(order(null))).toBeNull()
     expect(getChargedAmount(order({ checkoutSessionId: 'cs_live_1' }))).toBeNull()
+  })
+})
+
+describe('getCheckoutValue', () => {
+  const base = { payment_reference: null, total_ngn: 2586476.61, exchange_rate: 1759.5079 }
+
+  it('rebuilds the GBP amount Stripe would charge, ignoring the mislabelled display total', () => {
+    // DHV-2026-305889: stored as "1470 NGN", really £1,470
+    expect(getCheckoutValue({ ...base, payment_metadata: null, payment_method: 'stripe' })).toEqual({ amount: 1470, currency: 'GBP' })
+  })
+
+  it('uses NGN for Paystack and prefers provider-recorded amounts', () => {
+    expect(getCheckoutValue({ ...base, payment_metadata: null, payment_method: 'paystack' })).toEqual({ amount: 2586476.61, currency: 'NGN' })
+    expect(
+      getCheckoutValue({ ...base, payment_method: 'stripe', payment_metadata: { checkoutAmount: 1469.99, checkoutCurrency: 'gbp' } as never })
+    ).toEqual({ amount: 1469.99, currency: 'GBP' })
+    expect(
+      getCheckoutValue({ ...base, payment_method: 'stripe', payment_metadata: { amountTotal: 147000, currency: 'gbp' } as never })
+    ).toEqual({ amount: 1470, currency: 'GBP' })
+  })
+})
+
+describe('isClosedUnpaidCheckout', () => {
+  it('separates closed unpaid checkouts from real cancellations', () => {
+    expect(isClosedUnpaidCheckout({ status: 'CANCELLED', payment_status: 'expired' })).toBe(true)
+    expect(isClosedUnpaidCheckout({ status: 'CANCELLED', payment_status: 'abandoned' })).toBe(true)
+    expect(isClosedUnpaidCheckout({ status: 'CANCELLED', payment_status: 'paid' })).toBe(false)
+    expect(isClosedUnpaidCheckout({ status: 'CANCELLED', payment_status: 'pending' })).toBe(false)
+    expect(isClosedUnpaidCheckout({ status: 'PENDING', payment_status: 'failed' })).toBe(false)
   })
 })
 

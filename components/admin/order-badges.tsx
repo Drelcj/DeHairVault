@@ -34,7 +34,7 @@ export function TestBadge() {
   return (
     <span
       className="inline-flex items-center rounded border border-dashed border-orange-500 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-orange-600 dark:text-orange-400"
-      title="Placed with payment provider test keys. Excluded from all dashboard figures."
+      title="Test order (provider test mode, or a team member testing checkout). Excluded from all figures and the abandoned list."
     >
       TEST
     </span>

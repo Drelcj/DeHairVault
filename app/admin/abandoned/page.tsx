@@ -2,8 +2,7 @@ import Link from "next/link"
 import { ShoppingBag, ShoppingCart, Eye } from "lucide-react"
 import { formatPrice } from "@/lib/utils/currency"
 import { createServiceClient } from "@/lib/supabase/server"
-import { STALE_PENDING_HOURS, getUnpaidOutcome, isTestOrder, type UnpaidOutcome } from "@/lib/admin/order-metrics"
-import { TestBadge } from "@/components/admin/order-badges"
+import { STALE_PENDING_HOURS, getCheckoutValue, getUnpaidOutcome, isTestOrder, type UnpaidOutcome } from "@/lib/admin/order-metrics"
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +27,7 @@ async function getAbandonedCheckouts() {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_number, customer_name, customer_email, customer_phone, total_ngn, total_display_currency, display_currency, status, payment_status, payment_metadata, cancellation_reason, created_at, order_items(product_name, quantity, selected_length)'
+      'id, order_number, customer_name, customer_email, customer_phone, total_ngn, exchange_rate, payment_method, status, payment_status, payment_metadata, cancellation_reason, created_at, order_items(product_name, quantity, selected_length)'
     )
     .in('status', ['PENDING', 'CANCELLED'])
     .or('payment_status.is.null,payment_status.neq.paid')
@@ -37,8 +36,10 @@ async function getAbandonedCheckouts() {
 
   if (error) console.error('Error fetching abandoned checkouts:', error)
 
-  return (data ?? []).map((order) => ({
+  // Test-mode and internal test checkouts are not customers to follow up
+  return (data ?? []).filter((order) => !isTestOrder(order)).map((order) => ({
     ...order,
+    value: getCheckoutValue(order),
     outcome: getUnpaidOutcome(order),
     items: (order.order_items ?? []).map(
       (item): ItemSummary => ({ name: item.product_name, quantity: item.quantity, length: item.selected_length })
@@ -181,8 +182,6 @@ export default async function AbandonedPage({
                 ) : (
                   checkouts.map((order) => {
                     const outcome = OUTCOME_LABELS[order.outcome]
-                    const displayCurrency = order.display_currency?.toUpperCase()
-                    const hasDisplayTotal = !!displayCurrency && order.total_display_currency != null
                     return (
                       <tr key={order.id} className="hover:bg-muted/30 transition-colors align-top">
                         <td className="px-6 py-4">
@@ -192,18 +191,16 @@ export default async function AbandonedPage({
                         </td>
                         <td className="px-6 py-4"><ItemList items={order.items} /></td>
                         <td className="px-6 py-4 font-medium">
-                          {hasDisplayTotal
-                            ? formatPrice(Number(order.total_display_currency), displayCurrency!)
-                            : formatPrice(Number(order.total_ngn || 0), 'NGN')}
+                          {formatPrice(order.value.amount, order.value.currency)}
+                          <p className="text-xs font-normal text-muted-foreground">
+                            via {order.payment_method === 'paystack' ? 'Paystack' : 'Stripe'}
+                          </p>
                         </td>
                         <td className="px-6 py-4 text-muted-foreground">{formatDate(order.created_at)}</td>
                         <td className="px-6 py-4">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${outcome.style}`}>
-                              {outcome.label}
-                            </span>
-                            {isTestOrder(order) && <TestBadge />}
-                          </div>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${outcome.style}`}>
+                            {outcome.label}
+                          </span>
                           {order.cancellation_reason && (
                             <p className="mt-1 text-xs text-muted-foreground">{order.cancellation_reason}</p>
                           )}
