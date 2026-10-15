@@ -159,6 +159,7 @@ describe('order email templates', () => {
 describe('order paid emails', () => {
   beforeEach(() => {
     process.env.RESEND_API_KEY = 're_test'
+    delete process.env.ORDER_ALERT_RECIPIENTS
     mocks.order = makeOrder()
     mocks.send.mockReset()
     mocks.send.mockResolvedValue({ data: { id: 'email-1' }, error: null })
@@ -182,10 +183,28 @@ describe('order paid emails', () => {
     expect(confirmation[1]).toEqual({ idempotencyKey: 'order-confirmation/order-1' })
     expect(alert[0]).toMatchObject({
       from: 'Dehair Vault <orders@dehairvault.com>',
-      to: ['orders@dehairvault.com', 'onyinyechi@dehairvault.com'],
+      to: ['orders@dehairvault.com', 'onyinyechi@dehairvault.com', 'emmanuelc@techmandrel.com'],
     })
     expect(alert[1]).toEqual({ idempotencyKey: 'order-alert/order-1' })
     expect(mocks.order.paid_at).not.toBeNull()
+  })
+
+  it('sends the team alert to ORDER_ALERT_RECIPIENTS when it is set', async () => {
+    process.env.ORDER_ALERT_RECIPIENTS = ' ops@dehairvault.com, ,ceo@dehairvault.com '
+
+    await updateOrderStatus('order-1', 'CONFIRMED', 'paid', 'pi_1', stripeMeta)
+
+    const alert = mocks.send.mock.calls.find(([, options]) => options?.idempotencyKey === 'order-alert/order-1')
+    expect(alert?.[0].to).toEqual(['ops@dehairvault.com', 'ceo@dehairvault.com'])
+  })
+
+  it('falls back to the default team alert recipients when ORDER_ALERT_RECIPIENTS is blank', async () => {
+    process.env.ORDER_ALERT_RECIPIENTS = ' , '
+
+    await updateOrderStatus('order-1', 'CONFIRMED', 'paid', 'pi_1', stripeMeta)
+
+    const alert = mocks.send.mock.calls.find(([, options]) => options?.idempotencyKey === 'order-alert/order-1')
+    expect(alert?.[0].to).toEqual(['orders@dehairvault.com', 'onyinyechi@dehairvault.com', 'emmanuelc@techmandrel.com'])
   })
 
   it('does not email again when an already-paid order is confirmed a second time', async () => {

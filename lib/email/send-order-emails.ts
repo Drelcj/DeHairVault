@@ -3,7 +3,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { buildOrderEmailData, type OrderWithItems } from './order-email-data'
 import { renderNewOrderAlertEmail, renderOrderConfirmationEmail } from './order-email-templates'
-import { ORDERS_ADDRESS, TEAM_ALERT_RECIPIENTS, sendEmail } from './resend'
+import { ORDERS_ADDRESS, getTeamAlertRecipients, sendEmail } from './resend'
 
 /**
  * Send both "order paid" emails, exactly once per order.
@@ -53,7 +53,7 @@ export async function sendOrderPaidEmails(orderId: string): Promise<void> {
         { ...renderOrderConfirmationEmail(data), to: data.customerEmail, replyTo: ORDERS_ADDRESS },
         `order-confirmation/${orderId}`
       ),
-      sendEmail({ ...renderNewOrderAlertEmail(data), to: TEAM_ALERT_RECIPIENTS }, `order-alert/${orderId}`),
+      sendEmail({ ...renderNewOrderAlertEmail(data), to: getTeamAlertRecipients() }, `order-alert/${orderId}`),
     ])
 
     if (confirmation.ok) {

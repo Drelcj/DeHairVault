@@ -15,7 +15,7 @@ Multi-currency storefront, customer cart/checkout, admin panel for product/order
 - **Forms**: React Hook Form + Zod
 - **Payments**: Stripe (USD/GBP/EUR) + Paystack (NGN)
 - **Images**: Cloudinary (remote images only)
-- **Email**: Resend — order confirmation + team new-order alert, sent from `lib/email/` when `updateOrderStatus()` marks an order paid. Exactly-once via an atomic claim on `orders.paid_at`. Preview / test-send at `/admin/email-test`. Needs `dehairvault.com` verified as a Resend sending domain.
+- **Email**: Resend — order confirmation + team new-order alert, sent from `lib/email/` when `updateOrderStatus()` marks an order paid. Exactly-once via an atomic claim on `orders.paid_at`. Preview / test-send at `/admin/email-test`. Needs `dehairvault.com` verified as a Resend sending domain. Team-alert recipients come from `ORDER_ALERT_RECIPIENTS` (comma-separated, set in Vercel); if it is unset or blank they fall back to `orders@dehairvault.com`, `onyinyechi@dehairvault.com` and `emmanuelc@techmandrel.com` (`DEFAULT_TEAM_ALERT_RECIPIENTS` in `lib/email/resend.ts`).
 - **Testing**: Vitest + jsdom + @testing-library/react
 - **Deploy**: Vercel + Vercel Analytics
 - **Git**: default branch is `master` (there is no `main`)
@@ -131,6 +131,7 @@ PAYSTACK_SECRET_KEY
 RESEND_API_KEY
 NEXT_PUBLIC_APP_URL
 ```
+Optional: `ORDER_ALERT_RECIPIENTS` — comma-separated new-order alert recipients; overrides the defaults in `lib/email/resend.ts`.
 
 ## Performance & Scalability
 
