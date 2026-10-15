@@ -5,7 +5,20 @@ import { Resend } from 'resend'
 
 export const ORDERS_ADDRESS = 'orders@dehairvault.com'
 export const ORDERS_FROM = `Dehair Vault <${ORDERS_ADDRESS}>`
-export const TEAM_ALERT_RECIPIENTS = [ORDERS_ADDRESS, 'onyinyechi@dehairvault.com']
+export const DEFAULT_TEAM_ALERT_RECIPIENTS = [
+  ORDERS_ADDRESS,
+  'onyinyechi@dehairvault.com',
+  'emmanuelc@techmandrel.com',
+]
+
+// ORDER_ALERT_RECIPIENTS (comma-separated) overrides the defaults, so alert recipients can be changed in Vercel.
+export function getTeamAlertRecipients(): string[] {
+  const configured = (process.env.ORDER_ALERT_RECIPIENTS ?? '')
+    .split(',')
+    .map((address) => address.trim())
+    .filter(Boolean)
+  return configured.length > 0 ? configured : DEFAULT_TEAM_ALERT_RECIPIENTS
+}
 
 // Payment webhooks await the send, so cap how long a slow Resend call can hold them up.
 const SEND_TIMEOUT_MS = 8000
