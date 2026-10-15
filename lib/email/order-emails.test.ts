@@ -11,6 +11,12 @@ const mocks = vi.hoisted(() => ({
 function runQuery(q: Query) {
   if (q.table === 'order_items') return { data: [], error: null }
   if (q.action === 'update') {
+    // updateOrderStatus only records a payment on an order that isn't paid yet
+    if (q.filters.includes('or(payment_status.is.null,payment_status.neq.paid)')) {
+      if (mocks.order.payment_status === 'paid') return { data: [], error: null }
+      Object.assign(mocks.order, q.payload)
+      return { data: [{ id: mocks.order.id }], error: null }
+    }
     if (q.filters.includes('paid_at is null')) {
       if (mocks.order.paid_at !== null) return { data: [], error: null }
       Object.assign(mocks.order, q.payload)
@@ -47,6 +53,10 @@ vi.mock('@/lib/supabase/server', () => {
         },
         is: (column: string, value: unknown) => {
           q.filters.push(`${column} is ${value}`)
+          return builder
+        },
+        or: (filter: string) => {
+          q.filters.push(`or(${filter})`)
           return builder
         },
         single: async () => runQuery(q),

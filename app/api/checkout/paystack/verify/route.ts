@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
               currency: paymentData.currency,
               channel: paymentData.channel,
               paidAt: paymentData.paid_at,
+              paystackDomain: paymentData.domain,
+              livemode: paymentData.domain !== 'test',
               verifiedViaAPI: true,
             }
           )
@@ -115,6 +117,8 @@ export async function POST(request: NextRequest) {
         currency: paymentData.currency,
         channel: paymentData.channel,
         paidAt: paymentData.paid_at,
+        paystackDomain: paymentData.domain,
+        livemode: paymentData.domain !== 'test',
         verifiedViaAPI: true,
       }
     )

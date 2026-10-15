@@ -2,11 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { updateOrderStatus, clearCartAfterOrder } from '@/lib/actions/checkout'
 import { OrderStatus } from '@/types/app.types'
+import { closeUnpaidCheckout, recordPaymentFailed } from '@/lib/orders/payment-outcomes'
 
 // Initialize Stripe - let SDK use its default API version
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
+// New sessions copy the order id onto the payment intent. Older ones only have it on the
+// Checkout Session, so look that up by payment intent.
+async function findOrderIdForPaymentIntent(paymentIntent: Stripe.PaymentIntent): Promise<string | null> {
+  if (paymentIntent.metadata?.orderId) return paymentIntent.metadata.orderId
+  try {
+    const sessions = await stripe.checkout.sessions.list({ payment_intent: paymentIntent.id, limit: 1 })
+    const session = sessions.data[0]
+    return session?.client_reference_id || session?.metadata?.orderId || null
+  } catch (error) {
+    console.error('Could not look up checkout session for payment intent:', paymentIntent.id, error)
+    return null
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,6 +62,12 @@ export async function POST(request: NextRequest) {
           )
         }
 
+        // Card payments complete as 'paid'; anything else is settled by a later event
+        if (session.payment_status === 'unpaid') {
+          console.log(`Checkout completed unpaid for order ${orderId}; waiting for payment`)
+          break
+        }
+
         // Update order status
         const updateResult = await updateOrderStatus(
           orderId,
@@ -59,6 +80,7 @@ export async function POST(request: NextRequest) {
             amountTotal: session.amount_total,
             currency: session.currency,
             paymentStatus: session.payment_status,
+            livemode: event.livemode,
           }
         )
 
@@ -78,16 +100,52 @@ export async function POST(request: NextRequest) {
         const orderId = session.client_reference_id || session.metadata?.orderId
 
         if (orderId) {
-          // Optionally update order as expired/cancelled
-          console.log(`Checkout session expired for order ${orderId}`)
+          // Kept as an abandoned checkout; never touches a paid order
+          const result = await closeUnpaidCheckout(orderId, 'expired', 'Stripe checkout session expired', {
+            checkoutSessionId: session.id,
+            livemode: event.livemode,
+          })
+          console.log(`Checkout session expired for order ${orderId}`, result)
         }
         break
       }
 
-      case 'payment_intent.payment_failed': {
+      case 'checkout.session.async_payment_failed': {
+        const session = event.data.object as Stripe.Checkout.Session
+        const orderId = session.client_reference_id || session.metadata?.orderId
+
+        if (orderId) {
+          const details = { checkoutSessionId: session.id, livemode: event.livemode }
+          await recordPaymentFailed(orderId, details)
+          const result = await closeUnpaidCheckout(orderId, 'expired', 'Stripe payment failed', details)
+          console.log(`Async payment failed for order ${orderId}`, result)
+        }
+        break
+      }
+
+      case 'payment_intent.payment_failed':
+      case 'payment_intent.canceled': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        console.log('Payment failed:', paymentIntent.id)
-        // Handle payment failure if needed
+        const orderId = await findOrderIdForPaymentIntent(paymentIntent)
+
+        if (!orderId) {
+          console.log(`No order found for ${event.type}:`, paymentIntent.id)
+          break
+        }
+
+        const details = {
+          failedPaymentIntent: paymentIntent.id,
+          failureCode: paymentIntent.last_payment_error?.code ?? null,
+          failureMessage: paymentIntent.last_payment_error?.message ?? null,
+          livemode: event.livemode,
+        }
+
+        // A failed attempt stays retryable in the same checkout; a canceled intent is final
+        const result =
+          event.type === 'payment_intent.payment_failed'
+            ? await recordPaymentFailed(orderId, details)
+            : await closeUnpaidCheckout(orderId, 'expired', 'Stripe payment canceled', details)
+        console.log(`${event.type} for order ${orderId}:`, paymentIntent.id, result)
         break
       }
 

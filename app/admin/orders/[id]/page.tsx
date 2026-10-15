@@ -2,7 +2,10 @@ import Link from "next/link"
 import { HeaderShell } from "@/components/header-shell"
 import { formatPrice } from "@/lib/utils/currency"
 import { OrderStatusActions } from "./_components/order-status-actions"
+import { OrderNoteForm } from "./_components/order-note-form"
 import { createServiceClient } from "@/lib/supabase/server"
+import { getChargedAmount, getPaymentProvider, getPaymentReference, isTestOrder } from "@/lib/admin/order-metrics"
+import { OrderStatusBadge, PaymentStatusBadge, TestBadge } from "@/components/admin/order-badges"
 
 export const dynamic = 'force-dynamic'
 
@@ -42,6 +45,18 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   const data = await getOrder(id)
   const order = data?.order
   const items = data?.items ?? []
+  const charged = order ? getChargedAmount(order) : null
+  const reference = order ? getPaymentReference(order) : null
+  const provider = order ? getPaymentProvider(order) : null
+  const isTest = order ? isTestOrder(order) : false
+  const cityLine = [order?.shipping_city, order?.shipping_state, order?.shipping_postal_code].filter(Boolean).join(', ')
+  const addressLines = [
+    order?.customer_name,
+    order?.shipping_address_line1,
+    order?.shipping_address_line2,
+    cityLine,
+    order?.shipping_country,
+  ].filter((line): line is string => !!line)
 
   return (
     <main className="min-h-screen bg-background">
@@ -51,7 +66,11 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Admin</p>
-              <h1 className="font-[--font-playfair] text-2xl md:text-3xl font-medium text-foreground">Order {order?.order_number ?? '—'}</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-[--font-playfair] text-2xl md:text-3xl font-medium text-foreground">Order {order?.order_number ?? '—'}</h1>
+                <OrderStatusBadge status={order?.status ?? null} />
+                {isTest && <TestBadge />}
+              </div>
             </div>
             <Link href="/admin/orders" className="text-sm text-accent hover:text-accent/80">Back to Orders</Link>
           </div>
@@ -80,7 +99,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
                         <td className="px-4 md:px-6 py-6 text-muted-foreground" colSpan={5}>No items.</td>
                       </tr>
                     ) : (
-                      items.map((it: any) => (
+                      items.map((it) => (
                         <tr key={it.id} className="border-t border-border">
                           <td className="px-4 md:px-6 py-3">{it.product_name}</td>
                           <td className="px-4 md:px-6 py-3">{it.selected_length ?? '—'}</td>
@@ -96,12 +115,45 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             </div>
 
             <OrderStatusActions orderId={id} currentStatus={order?.status || 'PENDING'} />
-          </div>
 
-          <div className="grid gap-6">
             <div className="rounded-lg border border-border bg-card shadow-sm">
               <div className="px-4 md:px-6 py-4 border-b border-border">
-                <h2 className="text-base font-medium">Summary</h2>
+                <h2 className="text-base font-medium">Admin Notes</h2>
+              </div>
+              <div className="p-4 md:p-6 space-y-4 text-sm">
+                {order?.admin_notes ? (
+                  <p className="whitespace-pre-wrap text-foreground">{order.admin_notes}</p>
+                ) : (
+                  <p className="text-muted-foreground">No notes yet.</p>
+                )}
+                <OrderNoteForm orderId={id} />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 content-start">
+            <div className="rounded-lg border border-border bg-card shadow-sm">
+              <div className="px-4 md:px-6 py-4 border-b border-border">
+                <h2 className="text-base font-medium">Payment</h2>
+              </div>
+              <div className="p-4 md:p-6 text-sm space-y-1">
+                <Row label="Status"><PaymentStatusBadge status={order?.payment_status ?? null} /></Row>
+                <Row label="Charged">
+                  {charged ? formatPrice(charged.amount, charged.currency) : <span className="text-muted-foreground">Not recorded</span>}
+                </Row>
+                <Row label="Provider">{provider ? (provider === 'stripe' ? 'Stripe' : 'Paystack') : '—'}</Row>
+                <Row label="Reference">
+                  {reference ? <span className="font-mono text-xs break-all">{reference}</span> : '—'}
+                </Row>
+                <Row label="Paid at">{formatDateTime(order?.paid_at)}</Row>
+                <Row label="Mode">{isTest ? <TestBadge /> : 'Live'}</Row>
+                {order?.cancellation_reason && <Row label="Closed">{order.cancellation_reason}</Row>}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card shadow-sm">
+              <div className="px-4 md:px-6 py-4 border-b border-border">
+                <h2 className="text-base font-medium">Summary (order prices, ₦)</h2>
               </div>
               <div className="p-4 md:p-6 text-sm">
                 <div className="flex justify-between py-1"><span className="text-muted-foreground">Subtotal</span><span>{formatPrice(Number(order?.subtotal_ngn || 0), 'NGN')}</span></div>
@@ -119,6 +171,10 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
               <div className="p-4 md:p-6 text-sm">
                 <p className="font-medium">{order?.customer_name ?? '—'}</p>
                 <p className="text-muted-foreground">{order?.customer_email ?? '—'}</p>
+                {order?.customer_phone && <p className="text-muted-foreground">{order.customer_phone}</p>}
+                {order?.customer_notes && (
+                  <p className="mt-3 whitespace-pre-wrap border-t border-border pt-3">{order.customer_notes}</p>
+                )}
               </div>
             </div>
 
@@ -127,8 +183,36 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
                 <h2 className="text-base font-medium">Shipping Address</h2>
               </div>
               <div className="p-4 md:p-6 text-sm">
-                <p className="font-medium">{order?.shipping_address ?? '—'}</p>
-                <p className="text-muted-foreground">{order?.shipping_city ?? '—'}</p>
+                {addressLines.length > 0 ? (
+                  addressLines.map((line, index) => (
+                    <p key={index} className={index === 0 ? 'font-medium' : 'text-muted-foreground'}>{line}</p>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">—</p>
+                )}
+                {order?.shipping_method && (
+                  <p className="mt-3 text-xs text-muted-foreground">Method: {order.shipping_method}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card shadow-sm">
+              <div className="px-4 md:px-6 py-4 border-b border-border">
+                <h2 className="text-base font-medium">Tracking</h2>
+              </div>
+              <div className="p-4 md:p-6 text-sm space-y-1">
+                <Row label="Number">
+                  {order?.tracking_number ? <span className="font-mono text-xs">{order.tracking_number}</span> : '—'}
+                </Row>
+                {order?.tracking_url && (
+                  <Row label="Link">
+                    <a href={order.tracking_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                      Track parcel
+                    </a>
+                  </Row>
+                )}
+                <Row label="Shipped">{formatDateTime(order?.shipped_at)}</Row>
+                <Row label="Delivered">{formatDateTime(order?.delivered_at)}</Row>
               </div>
             </div>
           </div>
@@ -136,4 +220,18 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
       </section>
     </main>
   )
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-1">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="text-right">{children}</span>
+    </div>
+  )
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return '—'
+  return new Date(value).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }

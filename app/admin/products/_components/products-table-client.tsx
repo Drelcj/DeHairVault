@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { SoldOutToggle } from './sold-out-toggle'
+import { isLowStock, isOutOfStock } from '@/lib/utils/product'
 
 interface Product {
   id: string
@@ -24,6 +25,8 @@ interface Product {
   slug: string
   base_price_gbp: number
   stock_quantity: number
+  low_stock_threshold: number | null
+  track_inventory: boolean | null
   is_active: boolean
   is_sold_out: boolean
   category: string
@@ -113,9 +116,9 @@ export function ProductsTableClient({ products }: ProductsTableClientProps) {
                     <td className="px-6 py-4">
                       <span
                         className={`font-medium ${
-                          product.stock_quantity === 0
+                          isOutOfStock(product)
                             ? 'text-red-600 dark:text-red-400'
-                            : product.stock_quantity <= 10
+                            : isLowStock(product)
                             ? 'text-yellow-600 dark:text-yellow-400'
                             : 'text-foreground'
                         }`}

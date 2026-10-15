@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
           stripePaymentIntent: session.payment_intent,
           amountTotal: session.amount_total,
           currency: session.currency,
+          livemode: session.livemode,
           verifiedViaAPI: true,
         }
       )

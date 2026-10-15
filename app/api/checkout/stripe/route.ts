@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getOrder, getExchangeRates, getCatalogPricesGbp } from '@/lib/actions/checkout'
+import { recordCheckoutStarted } from '@/lib/orders/payment-outcomes'
 import { createClient } from '@/lib/supabase/server'
 import { findPriceViolations, PRICE_DEVIATION_TOLERANCE } from '@/lib/utils/price-guard'
 import type { OrderItem } from '@/types/app.types'
@@ -273,9 +274,23 @@ export async function POST(request: NextRequest) {
         customerName: order.customer_name,
         customerEmail: order.customer_email,
       },
+      // Lets payment_intent.payment_failed events be matched back to the order
+      payment_intent_data: {
+        metadata: { orderId, orderNumber },
+      },
     })
 
     console.log('Stripe session created:', session.id)
+
+    // Record the session now so an unpaid order can be traced and test orders identified
+    await recordCheckoutStarted(orderId, {
+      provider: 'stripe',
+      checkoutSessionId: session.id,
+      livemode: session.livemode,
+      // What the customer is asked to pay, for the abandoned-checkouts view
+      checkoutAmount: session.amount_total != null ? session.amount_total / 100 : null,
+      checkoutCurrency: session.currency?.toUpperCase() ?? 'GBP',
+    })
 
     return NextResponse.json({ url: session.url })
   } catch (error: any) {

@@ -497,17 +497,16 @@ export async function updateOrderStatus(
     // Use service role client for webhook operations (no user session available)
     const serviceSupabase = createServiceClient()
 
-    // The webhook and the verify route both land here for the same payment. Note whether the
-    // order was already paid so the confirmation emails only go out on the real transition.
-    let wasAlreadyPaid = false
-    if (paymentStatus === 'paid') {
-      const { data: priorOrder } = await serviceSupabase
-        .from('orders')
-        .select('payment_status')
-        .eq('id', orderId)
-        .maybeSingle()
-      wasAlreadyPaid = priorOrder?.payment_status === 'paid'
-    }
+    // Keep what checkout recorded (session id, livemode) and add the provider's payment details
+    const { data: priorOrder } = await serviceSupabase
+      .from('orders')
+      .select('payment_metadata')
+      .eq('id', orderId)
+      .maybeSingle()
+    const priorMetadata =
+      priorOrder?.payment_metadata && typeof priorOrder.payment_metadata === 'object' && !Array.isArray(priorOrder.payment_metadata)
+        ? priorOrder.payment_metadata
+        : {}
 
     const updateData: any = {
       status,
@@ -520,18 +519,29 @@ export async function updateOrderStatus(
     }
 
     if (paymentMetadata) {
-      updateData.payment_metadata = paymentMetadata
+      updateData.payment_metadata = { ...priorMetadata, ...paymentMetadata }
     }
 
-    const { error } = await (serviceSupabase as any).from('orders').update(updateData).eq('id', orderId)
+    let query = (serviceSupabase as any).from('orders').update(updateData).eq('id', orderId)
+
+    // The webhook and the verify route both land here for the same payment. Only the call that
+    // moves the order from unpaid to paid goes on to reduce stock and send emails, so each sale
+    // is counted exactly once and a late retry never resets an order an admin has moved on.
+    if (paymentStatus === 'paid') {
+      query = query.or('payment_status.is.null,payment_status.neq.paid')
+    }
+
+    const { data: updatedRows, error } = await query.select('id')
 
     if (error) {
       console.error('Error updating order status:', error)
       return { success: false, error: error.message }
     }
 
-    // If payment successful, reduce stock for tracked inventory items
-    if (paymentStatus === 'paid') {
+    const isNewPayment = paymentStatus === 'paid' && (updatedRows?.length ?? 0) > 0
+
+    // If this call recorded the payment, reduce stock for tracked inventory items
+    if (isNewPayment) {
       // Get order items
       const { data: orderItems } = await serviceSupabase
         .from('order_items')
@@ -563,7 +573,7 @@ export async function updateOrderStatus(
       }
     }
 
-    if (paymentStatus === 'paid' && !wasAlreadyPaid) {
+    if (isNewPayment) {
       // Sends at most once per order and never throws: a failed email is only logged
       await sendOrderPaidEmails(orderId)
     }

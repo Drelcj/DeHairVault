@@ -14,6 +14,7 @@ import {
   Store,
   LogOut,
   Mail,
+  ShoppingBag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/admin/abandoned', label: 'Abandoned', icon: ShoppingBag },
   { href: '/admin/inventory', label: 'Inventory', icon: Boxes },
   { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/returns', label: 'Returns', icon: RotateCcw },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { updateOrderStatus, clearCartAfterOrder } from '@/lib/actions/checkout'
 import { OrderStatus } from '@/types/app.types'
+import { recordPaymentFailed } from '@/lib/orders/payment-outcomes'
 
 const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY!
 
@@ -62,6 +63,8 @@ export async function POST(request: NextRequest) {
             currency: data.currency,
             channel: data.channel,
             paidAt: data.paid_at,
+            paystackDomain: data.domain,
+            livemode: data.domain !== 'test',
             authorizationCode: data.authorization?.authorization_code,
           }
         )
@@ -82,8 +85,14 @@ export async function POST(request: NextRequest) {
         const orderId = data.metadata?.orderId
 
         if (orderId) {
-          console.log(`Payment failed for order ${orderId}`)
-          // Optionally update order status to failed
+          // Stays PENDING so the customer can retry; the stale-order cron closes it later
+          const result = await recordPaymentFailed(orderId, {
+            paystackReference: data.reference,
+            failureMessage: data.gateway_response ?? null,
+            paystackDomain: data.domain,
+            livemode: data.domain !== 'test',
+          })
+          console.log(`Payment failed for order ${orderId}`, result)
         }
         break
       }

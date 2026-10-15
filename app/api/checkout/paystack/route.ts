@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOrder } from '@/lib/actions/checkout'
+import { recordCheckoutStarted } from '@/lib/orders/payment-outcomes'
 import { createClient } from '@/lib/supabase/server'
 
 // Get the app URL with validation and dynamic fallback (no hardcoded URLs)
@@ -148,6 +149,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Record the reference now so an unpaid order can be traced and test orders identified
+    await recordCheckoutStarted(orderId, {
+      provider: 'paystack',
+      paystackReference: data.data.reference,
+      livemode: !process.env.PAYSTACK_SECRET_KEY?.startsWith('sk_test_'),
+      // What the customer is asked to pay, for the abandoned-checkouts view
+      checkoutAmount: amountInKobo / 100,
+      checkoutCurrency: 'NGN',
+    })
 
     return NextResponse.json({
       authorization_url: data.data.authorization_url,
