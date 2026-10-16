@@ -4,7 +4,12 @@ import { z } from 'zod'
 import { getSessionUser } from '@/lib/auth/session'
 import { createServiceClient } from '@/lib/supabase/server'
 import { buildOrderEmailData, sampleOrderEmailData, type OrderEmailData, type OrderWithItems } from '@/lib/email/order-email-data'
-import { renderNewOrderAlertEmail, renderOrderConfirmationEmail } from '@/lib/email/order-email-templates'
+import {
+  renderNewOrderAlertEmail,
+  renderOrderConfirmationEmail,
+  renderOrderShippedEmail,
+  type ShipmentTracking,
+} from '@/lib/email/order-email-templates'
 import { ORDERS_ADDRESS, sendEmail } from '@/lib/email/resend'
 
 const orderNumberSchema = z.string().trim().regex(/^DHV-\d{4}-\d{6}$/, 'Order number must look like DHV-2026-123456')
@@ -15,6 +20,7 @@ export interface OrderEmailPreviews {
   recipient?: string
   confirmation?: { subject: string; html: string }
   alert?: { subject: string; html: string }
+  shipped?: { subject: string; html: string }
 }
 
 export interface TestEmailResult {
@@ -31,9 +37,14 @@ async function getAdminEmail(): Promise<string | null> {
   return session?.profile?.email || session?.user?.email || null
 }
 
-// Sample data by default; a real order's data when an order number is given
-async function loadEmailData(orderNumber?: string): Promise<{ data?: OrderEmailData; error?: string }> {
-  if (!orderNumber) return { data: sampleOrderEmailData() }
+// Shown in the sample shipped email, and for a real order that has no tracking saved yet
+const SAMPLE_TRACKING: ShipmentTracking = { number: 'DHL1234567890', url: 'https://www.dhl.com/gb-en/home/tracking.html' }
+
+// Sample data by default; a real order's data (and its saved tracking) when an order number is given
+async function loadEmailData(
+  orderNumber?: string
+): Promise<{ data?: OrderEmailData; tracking?: ShipmentTracking; error?: string }> {
+  if (!orderNumber) return { data: sampleOrderEmailData(), tracking: SAMPLE_TRACKING }
 
   const parsed = orderNumberSchema.safeParse(orderNumber)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -50,46 +61,55 @@ async function loadEmailData(orderNumber?: string): Promise<{ data?: OrderEmailD
   }
   if (!order) return { error: `Order ${parsed.data} not found` }
 
-  return { data: buildOrderEmailData(order as OrderWithItems) }
+  const hasTracking = Boolean(order.tracking_number || order.tracking_url)
+  return {
+    data: buildOrderEmailData(order as OrderWithItems),
+    tracking: hasTracking ? { number: order.tracking_number, url: order.tracking_url } : SAMPLE_TRACKING,
+  }
 }
 
-// Render both order emails without sending anything
+// Render the order emails without sending anything
 export async function getOrderEmailPreviews(orderNumber?: string): Promise<OrderEmailPreviews> {
   const recipient = await getAdminEmail()
   if (!recipient) return { success: false, error: 'Admin access required' }
 
-  const { data, error } = await loadEmailData(orderNumber)
+  const { data, tracking, error } = await loadEmailData(orderNumber)
   if (!data) return { success: false, error }
 
   const confirmation = renderOrderConfirmationEmail(data)
   const alert = renderNewOrderAlertEmail(data)
+  const shipped = renderOrderShippedEmail(data, tracking ?? SAMPLE_TRACKING)
   return {
     success: true,
     recipient,
     confirmation: { subject: confirmation.subject, html: confirmation.html },
     alert: { subject: alert.subject, html: alert.html },
+    shipped: { subject: shipped.subject, html: shipped.html },
   }
 }
 
-// Send both order emails to the signed-in admin only — never to the customer or the team
+// Send the order emails to the signed-in admin only — never to the customer or the team
 export async function sendTestOrderEmails(orderNumber?: string): Promise<TestEmailResult> {
   const recipient = await getAdminEmail()
   if (!recipient) return { success: false, error: 'Admin access required' }
 
-  const { data, error } = await loadEmailData(orderNumber)
+  const { data, tracking, error } = await loadEmailData(orderNumber)
   if (!data) return { success: false, error }
 
   const confirmation = renderOrderConfirmationEmail(data)
   const alert = renderNewOrderAlertEmail(data)
+  const shipped = renderOrderShippedEmail(data, tracking ?? SAMPLE_TRACKING)
 
-  const [confirmationResult, alertResult] = await Promise.all([
+  const [confirmationResult, alertResult, shippedResult] = await Promise.all([
     sendEmail({ ...confirmation, subject: `[TEST] ${confirmation.subject}`, to: recipient, replyTo: ORDERS_ADDRESS }),
     sendEmail({ ...alert, subject: `[TEST] ${alert.subject}`, to: recipient }),
+    sendEmail({ ...shipped, subject: `[TEST] ${shipped.subject}`, to: recipient, replyTo: ORDERS_ADDRESS }),
   ])
 
   const failures = [
     confirmationResult.ok ? null : `Customer confirmation: ${confirmationResult.error}`,
     alertResult.ok ? null : `Team alert: ${alertResult.error}`,
+    shippedResult.ok ? null : `Shipped: ${shippedResult.error}`,
   ].filter(Boolean)
 
   if (failures.length > 0) {

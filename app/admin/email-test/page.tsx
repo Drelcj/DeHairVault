@@ -23,8 +23,9 @@ export default async function AdminEmailTestPage({
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Order emails</h1>
           <p className="text-sm text-muted-foreground">
-            {order ? `Previewing with order ${order}.` : 'Previewing with sample data.'} Test emails go only to you,
-            with [TEST] in the subject.
+            {order ? `Previewing with order ${order}.` : 'Previewing with sample data.'} The shipped email uses the
+            order&rsquo;s saved tracking, or sample tracking if it has none. Test emails go only to you, with [TEST] in the
+            subject.
           </p>
         </div>
         {previews.success && previews.recipient && (
@@ -38,6 +39,7 @@ export default async function AdminEmailTestPage({
         {[
           { title: 'Customer confirmation', email: previews.confirmation },
           { title: 'Team alert', email: previews.alert },
+          { title: 'Customer: order shipped', email: previews.shipped },
         ].map(
           ({ title, email }) =>
             email && (

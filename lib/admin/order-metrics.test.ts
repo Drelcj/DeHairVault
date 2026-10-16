@@ -9,7 +9,7 @@ import {
   isTestOrder,
   sumChargedByCurrency,
 } from './order-metrics'
-import { isHistoricalOrder, transitionMovesStock } from './order-transitions'
+import { canMarkDelivered, isHistoricalOrder, isValidTrackingUrl, transitionMovesStock } from './order-transitions'
 import { isLowStock, isOutOfStock } from '@/lib/utils/product'
 
 const order = (payment_metadata: Record<string, unknown> | null, payment_reference: string | null = null) => ({
@@ -152,5 +152,27 @@ describe('isLowStock', () => {
     expect(isLowStock({ stock_quantity: 0, low_stock_threshold: 10 })).toBe(false)
     expect(isLowStock({ stock_quantity: 2, low_stock_threshold: 10, track_inventory: false })).toBe(false)
     expect(isOutOfStock({ stock_quantity: 0, low_stock_threshold: 10 })).toBe(true)
+  })
+})
+
+describe('canMarkDelivered', () => {
+  it('allows paid Confirmed, Processing and Shipped orders, and nothing else', () => {
+    for (const status of ['CONFIRMED', 'PROCESSING', 'SHIPPED']) {
+      expect(canMarkDelivered({ status, payment_status: 'paid' })).toBe(true)
+      expect(transitionMovesStock(status, 'DELIVERED')).toBe(false)
+    }
+    for (const status of ['PENDING', 'DELIVERED', 'CANCELLED', 'REFUNDED', null]) {
+      expect(canMarkDelivered({ status, payment_status: 'paid' })).toBe(false)
+    }
+    expect(canMarkDelivered({ status: 'CONFIRMED', payment_status: 'pending' })).toBe(false)
+  })
+})
+
+describe('isValidTrackingUrl', () => {
+  it('accepts http(s) links only', () => {
+    expect(isValidTrackingUrl('https://www.dhl.com/track?id=1')).toBe(true)
+    expect(isValidTrackingUrl('http://example.com')).toBe(true)
+    expect(isValidTrackingUrl('javascript:alert(1)')).toBe(false)
+    expect(isValidTrackingUrl('www.dhl.com')).toBe(false)
   })
 })

@@ -8,11 +8,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { VALID_TRANSITIONS } from '@/lib/admin/order-transitions'
+import { VALID_TRANSITIONS, canMarkDelivered } from '@/lib/admin/order-transitions'
+import { MarkDeliveredDialog } from './mark-delivered-dialog'
 
 interface OrderStatusActionsProps {
   orderId: string
+  orderNumber: string
   currentStatus: string
+  paymentStatus: string | null
+  trackingNumber: string | null
+  trackingUrl: string | null
 }
 
 const ORDER_STATUSES = [
@@ -25,16 +30,24 @@ const ORDER_STATUSES = [
   { value: 'REFUNDED', label: 'Refunded' },
 ]
 
-export function OrderStatusActions({ orderId, currentStatus }: OrderStatusActionsProps) {
+export function OrderStatusActions({
+  orderId,
+  orderNumber,
+  currentStatus,
+  paymentStatus,
+  trackingNumber: savedTrackingNumber,
+  trackingUrl: savedTrackingUrl,
+}: OrderStatusActionsProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [newStatus, setNewStatus] = useState(currentStatus)
-  const [trackingNumber, setTrackingNumber] = useState('')
-  const [trackingUrl, setTrackingUrl] = useState('')
+  const [trackingNumber, setTrackingNumber] = useState(savedTrackingNumber ?? '')
+  const [trackingUrl, setTrackingUrl] = useState(savedTrackingUrl ?? '')
   const [adminNote, setAdminNote] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const allowedStatuses = VALID_TRANSITIONS[currentStatus] || []
+  const showMarkDelivered = canMarkDelivered({ status: currentStatus, payment_status: paymentStatus })
 
   const handleUpdate = async () => {
     if (!newStatus || newStatus === currentStatus) {
@@ -50,7 +63,13 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
       })
       const result = await res.json().catch(() => null)
       if (!res.ok) throw new Error(result?.error || `Failed to update status (${res.status})`)
-      toast.success(`Order moved to ${newStatus}`)
+      if (result?.shippedEmail?.sent) {
+        toast.success(`Order moved to ${newStatus}. Shipping email sent to the customer.`)
+      } else if (result?.shippedEmail) {
+        toast.warning(`Order moved to ${newStatus}, but the shipping email failed: ${result.shippedEmail.error}`, { duration: 15000 })
+      } else {
+        toast.success(`Order moved to ${newStatus}`)
+      }
       setIsOpen(false)
       setAdminNote('')
       router.refresh()
@@ -73,7 +92,18 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
           {allowedStatuses.length > 0 && (
             <>
               {!isOpen ? (
-                <Button onClick={() => setIsOpen(true)} variant="outline" className="border-border">Update Status</Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => setIsOpen(true)} variant="outline" className="border-border">Update Status</Button>
+                  {showMarkDelivered && (
+                    <MarkDeliveredDialog
+                      orderId={orderId}
+                      orderNumber={orderNumber}
+                      currentStatus={currentStatus}
+                      trackingNumber={savedTrackingNumber}
+                      trackingUrl={savedTrackingUrl}
+                    />
+                  )}
+                </div>
               ) : (
                 <div className="space-y-3">
                   <div>
@@ -93,7 +123,7 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
                   {newStatus === 'SHIPPED' && (
                     <>
                       <div>
-                        <Label className="text-xs font-medium">Tracking Number</Label>
+                        <Label className="text-xs font-medium">Tracking Number (optional)</Label>
                         <Input
                           placeholder="e.g., DHL123456789"
                           value={trackingNumber}
@@ -102,7 +132,7 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
                         />
                       </div>
                       <div>
-                        <Label className="text-xs font-medium">Tracking URL</Label>
+                        <Label className="text-xs font-medium">Tracking Link (optional)</Label>
                         <Input
                           placeholder="https://..."
                           value={trackingUrl}
@@ -110,6 +140,9 @@ export function OrderStatusActions({ orderId, currentStatus }: OrderStatusAction
                           className="h-9 text-sm border-border"
                         />
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Saving emails the customer that their order has shipped, with the tracking details if you add them.
+                      </p>
                     </>
                   )}
                   <div>

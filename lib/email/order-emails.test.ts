@@ -71,7 +71,7 @@ vi.mock('@/lib/supabase/server', () => {
 
 import { updateOrderStatus } from '@/lib/actions/checkout'
 import { buildOrderEmailData, type OrderWithItems } from './order-email-data'
-import { renderNewOrderAlertEmail, renderOrderConfirmationEmail } from './order-email-templates'
+import { renderNewOrderAlertEmail, renderOrderConfirmationEmail, renderOrderShippedEmail } from './order-email-templates'
 
 const NGN_RATE = 2000
 
@@ -163,6 +163,29 @@ describe('order email templates', () => {
     expect(email.subject).toMatch(/^New order: DHV-2026-123456/)
     expect(email.html).toContain('https://www.dehairvault.com/admin/orders/order-1')
     expect(email.html).toContain('mailto:ada@example.com')
+  })
+
+  it('shows the tracking number and link in the shipped email, without prices', () => {
+    const email = renderOrderShippedEmail(data, { number: 'DHL<123>', url: 'https://track.example.com/?id=1&x=2' })
+
+    expect(email.subject).toBe('Your Dehair Vault order DHV-2026-123456 has shipped')
+    for (const expected of ['DHV-2026-123456', 'Raw Bundle', 'Qty 2', '1 Test Street', 'Tracking number', 'Track your parcel']) {
+      expect(email.html).toContain(expected)
+    }
+    expect(email.html).toContain('DHL&lt;123&gt;')
+    expect(email.html).toContain('href="https://track.example.com/?id=1&amp;x=2"')
+    expect(email.text).toContain('Tracking number: DHL<123>')
+    expect(email.text).toContain('Track your parcel: https://track.example.com/?id=1&x=2')
+    expect(email.html).not.toContain('£360.00')
+  })
+
+  it('leaves the tracking section out of the shipped email when there is no tracking', () => {
+    const email = renderOrderShippedEmail(data, { number: null, url: null })
+
+    expect(email.html).toContain('Your order is on its way')
+    expect(email.html).not.toContain('Tracking number')
+    expect(email.html).not.toContain('Track your parcel')
+    expect(email.text).not.toContain('Tracking')
   })
 })
 
