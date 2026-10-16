@@ -1,8 +1,8 @@
 'use client'
 
 import { useCurrency } from '@/contexts/currency-context'
+import { formatMoney } from '@/lib/currency/config'
 import { cn } from '@/lib/utils'
-import { useState, useEffect } from 'react'
 
 interface PriceDisplayProps {
   amountGbp: number
@@ -19,6 +19,8 @@ const sizeClasses = {
   xl: 'text-xl',
 }
 
+// Currency and rates are seeded from the server (see app/layout.tsx), so the
+// server render and the first browser render already agree — no mount gating.
 export function PriceDisplay({
   amountGbp,
   showOriginal = false,
@@ -26,24 +28,16 @@ export function PriceDisplay({
   originalClassName,
   size = 'md',
 }: PriceDisplayProps) {
-  const { formatPrice, currency } = useCurrency()
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  // Show GBP on server and initial client render to avoid hydration mismatch
-  const displayPrice = isMounted 
-    ? formatPrice(amountGbp)
-    : `£${amountGbp.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const { formatPrice } = useCurrency()
+  const displayPrice = formatPrice(amountGbp)
+  const gbpPrice = formatMoney(amountGbp, 'GBP')
 
   return (
     <span className={cn(sizeClasses[size], 'font-medium', className)}>
       {displayPrice}
-      {isMounted && showOriginal && currency !== 'GBP' && (
+      {showOriginal && displayPrice !== gbpPrice && (
         <span className={cn('text-muted-foreground text-sm ml-1', originalClassName)}>
-          (£{amountGbp.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+          ({gbpPrice})
         </span>
       )}
     </span>
@@ -64,26 +58,16 @@ export function CompareAtPrice({
   size = 'md',
 }: CompareAtPriceProps) {
   const { formatPrice } = useCurrency()
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   if (!compareAtPrice || compareAtPrice <= basePrice) {
     return <PriceDisplay amountGbp={basePrice} className={className} size={size} />
   }
 
-  // Show GBP on server and initial client render to avoid hydration mismatch
-  const displayComparePrice = isMounted 
-    ? formatPrice(compareAtPrice)
-    : `£${compareAtPrice.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
   return (
     <div className={cn('flex flex-col', className)}>
       <PriceDisplay amountGbp={basePrice} size={size} />
       <span className="text-sm text-muted-foreground line-through">
-        {displayComparePrice}
+        {formatPrice(compareAtPrice)}
       </span>
     </div>
   )

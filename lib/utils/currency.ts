@@ -18,13 +18,13 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 /**
  * Format a price amount with currency symbol
  * @param amount - The amount to format
- * @param currency - Currency code (NGN, USD, GBP, EUR, CAD, GHS)
+ * @param currency - Currency code the amount is already in (NGN, USD, GBP, EUR, CAD, GHS). Required: no default, so a GBP amount can never pick up a ₦ sign by accident.
  * @param options - Additional formatting options
  * @returns Formatted price string
  */
 export function formatPrice(
   amount: number,
-  currency: string = 'NGN',
+  currency: string,
   options?: {
     showDecimals?: boolean;
     locale?: string;
@@ -106,7 +106,7 @@ export function parsePrice(priceString: string): number {
 export function formatPriceRange(
   minPrice: number,
   maxPrice: number,
-  currency: string = 'NGN'
+  currency: string
 ): string {
   if (minPrice === maxPrice) {
     return formatPrice(minPrice, currency);
