@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { HeaderShell } from "@/components/header-shell"
 import { formatPrice } from "@/lib/utils/currency"
 import { OrderStatusActions } from "./_components/order-status-actions"
 import { OrderNoteForm } from "./_components/order-note-form"
@@ -60,7 +59,6 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
   return (
     <main className="min-h-screen bg-background">
-      <HeaderShell />
       <section className="container mx-auto px-6 lg:px-12 py-10">
         <div className="mb-6">
           <div className="flex items-center justify-between">
@@ -76,8 +74,10 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           </div>
         </div>
 
+        {/* grid-cols-1 + min-w-0: without them the items table's width stretches the left column
+            under the right one, and the right column covers the status controls */}
         <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2 grid gap-6">
+          <div className="md:col-span-2 grid grid-cols-1 gap-6 min-w-0">
             <div className="rounded-lg border border-border bg-card shadow-sm">
               <div className="px-4 md:px-6 py-4 border-b border-border">
                 <h2 className="text-base font-medium">Items</h2>
@@ -114,7 +114,14 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
               </div>
             </div>
 
-            <OrderStatusActions orderId={id} currentStatus={order?.status || 'PENDING'} />
+            <OrderStatusActions
+              orderId={id}
+              orderNumber={order?.order_number ?? ''}
+              currentStatus={order?.status || 'PENDING'}
+              paymentStatus={order?.payment_status ?? null}
+              trackingNumber={order?.tracking_number ?? null}
+              trackingUrl={order?.tracking_url ?? null}
+            />
 
             <div className="rounded-lg border border-border bg-card shadow-sm">
               <div className="px-4 md:px-6 py-4 border-b border-border">
@@ -131,7 +138,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             </div>
           </div>
 
-          <div className="grid gap-6 content-start">
+          <div className="grid grid-cols-1 gap-6 content-start min-w-0">
             <div className="rounded-lg border border-border bg-card shadow-sm">
               <div className="px-4 md:px-6 py-4 border-b border-border">
                 <h2 className="text-base font-medium">Payment</h2>

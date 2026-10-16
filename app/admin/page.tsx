@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Package, ShoppingCart, Users, TrendingUp, Boxes, Truck, ShoppingBag } from 'lucide-react'
+import { Package, ShoppingCart, Users, TrendingUp, Boxes, Truck, ShoppingBag, Trophy } from 'lucide-react'
 import { createServiceClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/currency'
 import { isLowStock, isOutOfStock } from '@/lib/utils/product'
@@ -44,6 +44,10 @@ async function getDashboardStats() {
   })
   const revenue = sumChargedByCurrency(monthlySales)
 
+  // All time: same rule as the month (paid, live, not cancelled or refunded), no date filter
+  const allTimeSales = orders.filter(isSale)
+  const allTimeRevenue = sumChargedByCurrency(allTimeSales)
+
   // Get customer count
   const { count: customerCount } = await supabase
     .from('users')
@@ -60,6 +64,9 @@ async function getDashboardStats() {
     monthlyOrdersCount: monthlySales.length,
     revenueByCurrency: revenue.totals,
     revenueMissingCount: revenue.missing,
+    allTimeOrdersCount: allTimeSales.length,
+    allTimeRevenueByCurrency: allTimeRevenue.totals,
+    allTimeRevenueMissingCount: allTimeRevenue.missing,
     customerCount: customerCount || 0,
   }
 }
@@ -73,7 +80,6 @@ function orderedCurrencies(totals: Record<string, number>): string[] {
 
 export default async function AdminDashboard() {
   const stats = await getDashboardStats()
-  const currencies = orderedCurrencies(stats.revenueByCurrency)
 
   return (
     <div className="space-y-8">
@@ -105,37 +111,20 @@ export default async function AdminDashboard() {
           subtitle={`${stats.staleUnpaidCount} older than ${STALE_PENDING_HOURS}h`}
           subtitleColor={stats.staleUnpaidCount > 0 ? 'text-amber-600' : undefined}
         />
-        <Link
-          href="/admin/orders"
-          className="group rounded-xl border border-border bg-card p-6 transition-all hover:border-accent hover:shadow-md"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Revenue This Month</p>
-              <div className="mt-2 space-y-1">
-                {currencies.map((currency) => (
-                  <p key={currency} className="text-2xl font-semibold text-foreground">
-                    {formatPrice(stats.revenueByCurrency[currency] ?? 0, currency)}
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      {currency === 'GBP' ? 'via Stripe' : currency === 'NGN' ? 'via Paystack' : ''}
-                    </span>
-                  </p>
-                ))}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {stats.monthlyOrdersCount} paid orders this month
-              </p>
-              {stats.revenueMissingCount > 0 && (
-                <p className="mt-1 text-xs text-amber-600">
-                  {stats.revenueMissingCount} paid order{stats.revenueMissingCount === 1 ? '' : 's'} missing the charged amount
-                </p>
-              )}
-            </div>
-            <div className="rounded-lg bg-muted p-2.5 group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-          </div>
-        </Link>
+        <RevenueCard
+          title="Revenue This Month"
+          totals={stats.revenueByCurrency}
+          ordersLabel={`${stats.monthlyOrdersCount} paid orders this month`}
+          missingCount={stats.revenueMissingCount}
+          icon={TrendingUp}
+        />
+        <RevenueCard
+          title="All-Time Sales"
+          totals={stats.allTimeRevenueByCurrency}
+          ordersLabel={`${stats.allTimeOrdersCount} paid orders all time`}
+          missingCount={stats.allTimeRevenueMissingCount}
+          icon={Trophy}
+        />
         <StatCard
           title="Active Products"
           value={stats.productCount.toString()}
@@ -189,6 +178,49 @@ export default async function AdminDashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+type RevenueCardProps = {
+  title: string
+  totals: Record<string, number>
+  ordersLabel: string
+  missingCount: number
+  icon: React.ComponentType<{ className?: string }>
+}
+
+// Live sales per charged currency (test, cancelled and refunded orders already excluded)
+function RevenueCard({ title, totals, ordersLabel, missingCount, icon: Icon }: RevenueCardProps) {
+  return (
+    <Link
+      href="/admin/orders"
+      className="group rounded-xl border border-border bg-card p-6 transition-all hover:border-accent hover:shadow-md"
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <div className="mt-2 space-y-1">
+            {orderedCurrencies(totals).map((currency) => (
+              <p key={currency} className="text-2xl font-semibold text-foreground">
+                {formatPrice(totals[currency] ?? 0, currency)}
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  {currency === 'GBP' ? 'via Stripe' : currency === 'NGN' ? 'via Paystack' : ''}
+                </span>
+              </p>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{ordersLabel}</p>
+          {missingCount > 0 && (
+            <p className="mt-1 text-xs text-amber-600">
+              {missingCount} paid order{missingCount === 1 ? '' : 's'} missing the charged amount
+            </p>
+          )}
+        </div>
+        <div className="rounded-lg bg-muted p-2.5 group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    </Link>
   )
 }
 

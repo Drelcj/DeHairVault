@@ -4,12 +4,33 @@ import { STOCK_RECONCILIATION_DATE } from '@/lib/admin/order-metrics'
 
 export const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PROCESSING', 'CANCELLED'],
+  // CONFIRMED -> SHIPPED lets an order that is packed and sent in one go get its tracking straight away
+  CONFIRMED: ['PROCESSING', 'SHIPPED', 'CANCELLED'],
   PROCESSING: ['SHIPPED'],
   SHIPPED: ['DELIVERED'],
   DELIVERED: ['REFUNDED'],
   CANCELLED: [],
   REFUNDED: [],
+}
+
+/**
+ * Paid orders in these statuses can be marked Delivered in one step, for orders fulfilled
+ * outside the system. None of these moves touches stock (see transitionMovesStock).
+ */
+export const MARK_DELIVERED_FROM = ['CONFIRMED', 'PROCESSING', 'SHIPPED']
+
+export function canMarkDelivered(order: { status: string | null; payment_status: string | null }): boolean {
+  return order.payment_status === 'paid' && MARK_DELIVERED_FROM.includes(order.status ?? '')
+}
+
+/** Tracking links must be plain http(s) URLs: they are shown as links in admin and in the customer email. */
+export function isValidTrackingUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
 }
 
 /**

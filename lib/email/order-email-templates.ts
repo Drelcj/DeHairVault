@@ -148,6 +148,91 @@ Dehair Vault - dehairvault.com`
   return { subject, html, text }
 }
 
+export interface ShipmentTracking {
+  number: string | null
+  url: string | null
+}
+
+// Items without prices: the customer has already had the receipt, this one is about the parcel
+function shippedItemsTable(data: OrderEmailData): string {
+  const rows = data.items
+    .map(
+      (item) => `<tr>
+<td style="padding:14px 0;border-bottom:1px solid ${COLOR.border};${body}">${esc(item.name)}<br><span style="font-size:13px;line-height:20px;color:${COLOR.muted};">${
+        item.details ? `${esc(item.details)} &middot; ` : ''
+      }Qty ${item.quantity}</span></td>
+</tr>`
+    )
+    .join('\n')
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${COLOR.border};">
+${rows}
+</table>`
+}
+
+function trackingSection(tracking: ShipmentTracking): string {
+  if (!tracking.number && !tracking.url) return ''
+  const number = tracking.number
+    ? `<p style="margin:0 0 6px 0;${label}">Tracking number</p>
+<p style="margin:0 0 ${tracking.url ? '20px' : '0'} 0;${body}font-weight:600;letter-spacing:0.5px;">${esc(tracking.number)}</p>`
+    : ''
+  const link = tracking.url ? button(tracking.url, 'Track your parcel') : ''
+  return `<div style="margin:0 0 28px 0;padding:20px 18px;background-color:${COLOR.background};border-left:3px solid ${COLOR.gold};">
+${number}
+${link}
+</div>`
+}
+
+export function renderOrderShippedEmail(data: OrderEmailData, tracking: ShipmentTracking): RenderedEmail {
+  const firstName = data.customerName.trim().split(/\s+/)[0] || 'there'
+  const subject = `Your Dehair Vault order ${data.orderNumber} has shipped`
+  const hasTracking = Boolean(tracking.number || tracking.url)
+
+  const html = shell(
+    subject,
+    hasTracking ? 'Your order is on its way. Your tracking details are inside.' : 'Your order is on its way.',
+    `<h1 style="margin:0 0 12px 0;font-family:${SERIF};font-weight:400;font-size:26px;line-height:34px;color:${COLOR.foreground};">Your order is on its way</h1>
+<p style="margin:0 0 28px 0;${body}">Hi ${esc(firstName)}, good news: your order has shipped.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
+<tr>
+<td valign="top" style="${label}">Order number<br><span style="${body}text-transform:none;letter-spacing:0;font-weight:600;">${esc(data.orderNumber)}</span></td>
+</tr>
+</table>
+${trackingSection(tracking)}
+${shippedItemsTable(data)}
+<p style="margin:32px 0 6px 0;${label}">Shipping to</p>
+<p style="margin:0 0 28px 0;${body}">${data.shippingAddress.map(esc).join('<br>')}</p>
+${button(data.customerOrderUrl, 'View your order')}
+<p style="margin:28px 0 0 0;font-family:${SANS};font-size:13px;line-height:21px;color:${COLOR.muted};">Questions about your delivery? Just reply to this email or write to <a href="mailto:${ORDERS_ADDRESS}" style="color:${COLOR.primary};">${ORDERS_ADDRESS}</a>.</p>`
+  )
+
+  const trackingText = [
+    tracking.number ? `Tracking number: ${tracking.number}` : null,
+    tracking.url ? `Track your parcel: ${tracking.url}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const text = `Your order is on its way
+
+Hi ${firstName}, good news: your order has shipped.
+
+Order number: ${data.orderNumber}
+${trackingText ? `\n${trackingText}\n` : ''}
+${data.items.map((item) => `- ${item.name}${item.details ? ` (${item.details})` : ''} x ${item.quantity}`).join('\n')}
+
+Shipping to:
+${data.shippingAddress.join('\n')}
+
+View your order: ${data.customerOrderUrl}
+
+Questions about your delivery? Just reply to this email or write to ${ORDERS_ADDRESS}.
+
+Dehair Vault - dehairvault.com`
+
+  return { subject, html, text }
+}
+
 export function renderNewOrderAlertEmail(data: OrderEmailData): RenderedEmail {
   const subject = `New order: ${data.orderNumber} (${data.totalPaid}, ${data.customerName})`
 
