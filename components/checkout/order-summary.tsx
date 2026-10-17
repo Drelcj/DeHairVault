@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Truck, Info } from 'lucide-react'
 import { useCurrency } from '@/contexts/currency-context'
-import { formatNGN, formatGBP } from '@/lib/utils/currency'
+import { formatMoney } from '@/lib/currency/config'
 import { getProductImageSources } from '@/lib/utils'
 import type { CartWithItems } from '@/lib/actions/cart'
 
@@ -65,7 +65,11 @@ export function OrderSummary({
     (sum, item) => sum + (item.product.base_price_gbp * item.quantity),
     0
   )
-  const total = subtotal + shippingCost + tax - discount
+  // The coupon discount arrives in NGN (applyCoupon works on cart.subtotalNgn);
+  // convert it back to GBP with the cart's NGN rate before mixing it with GBP amounts.
+  const ngnRate = cart.exchangeRate > 0 ? cart.exchangeRate : null
+  const discountGbp = discount > 0 && ngnRate ? discount / ngnRate : 0
+  const total = subtotal + shippingCost + tax - discountGbp
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-all duration-300">
@@ -154,10 +158,10 @@ export function OrderSummary({
             <span className="font-medium text-foreground">{formatPrice(tax)}</span>
           </div>
         )}
-        {discount > 0 && (
+        {discountGbp > 0 && (
           <div className="flex justify-between text-green-600 dark:text-green-400">
             <span>Discount</span>
-            <span className="font-medium">-{formatPrice(discount)}</span>
+            <span className="font-medium">-{formatPrice(discountGbp)}</span>
           </div>
         )}
       </div>
@@ -171,10 +175,10 @@ export function OrderSummary({
           <span className="text-foreground">Total</span>
           <span className="text-foreground">{formatPrice(total)}</span>
         </div>
-        {currency !== 'NGN' && (
+        {currency !== 'NGN' && ngnRate && (
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Original (NGN)</span>
-            <span>{formatNGN(total)}</span>
+            <span>Equivalent in NGN</span>
+            <span>{formatMoney(total * ngnRate, 'NGN')}</span>
           </div>
         )}
       </div>

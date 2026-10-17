@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PaymentVerifier } from '@/components/checkout/payment-verifier'
+import { formatMoney, isSupportedCurrency } from '@/lib/currency/config'
 import { 
   CheckCircle2, 
   Package, 
@@ -75,13 +76,9 @@ interface SuccessPageContentProps {
 function formatCurrency(amount: number | null | undefined, currency: string): string {
   if (amount == null || isNaN(amount)) return '—'
   
-  const formatters: Record<string, () => string> = {
-    NGN: () => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount),
-    GBP: () => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount),
-    USD: () => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount),
-  }
-  
-  return formatters[currency]?.() ?? formatters.NGN()
+  // Never fall back to another currency's symbol (e.g. a EUR amount shown with ₦)
+  if (!isSupportedCurrency(currency)) return `${amount.toFixed(2)} ${currency}`
+  return formatMoney(amount, currency, 2)
 }
 
 function formatDate(dateString: string): string {
@@ -101,7 +98,9 @@ function formatTime(dateString: string): string {
 }
 
 export function SuccessPageContent({ order, orderNumber }: SuccessPageContentProps) {
-  const currency = order?.display_currency || 'NGN'
+  // Non-NGN figures below are NGN amounts divided by the order's NGN rate
+  // (exchange_rate), i.e. GBP — whatever display_currency the shopper had selected.
+  const currency = (order?.display_currency || 'NGN') === 'NGN' ? 'NGN' : 'GBP'
   
   // Calculate display amounts based on saved currency
   const displayTotal = currency === 'NGN' 
