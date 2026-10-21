@@ -20,9 +20,11 @@ interface HeroCarouselProps {
  * the server HTML) and stacked in one grid cell; only the active one is
  * visible and reachable — the rest are `inert`.
  *
- * Follows the WAI-ARIA carousel pattern: rotation pauses on hover / keyboard
- * focus, has a persistent pause button, and never starts for visitors who
- * prefer reduced motion.
+ * Follows the WAI-ARIA carousel pattern. Rotation keeps going under the
+ * mouse; it stops for good (until play is pressed) once the visitor uses the
+ * pause button, an arrow, a dot, a swipe or the arrow keys. It also holds
+ * while a link inside a slide has keyboard focus, and never starts for
+ * visitors who prefer reduced motion.
  */
 export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
   const slides = Children.toArray(children)
@@ -30,10 +32,10 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
   const prefersReducedMotion = useReducedMotion()
 
   const [index, setIndex] = useState(0)
-  // Persistent pause, set by the pause button (or reduced-motion preference)
+  // Persistent pause: set by any manual navigation, the pause button, or the
+  // reduced-motion preference; cleared only by the play button
   const [userPaused, setUserPaused] = useState(false)
-  // Temporary pause while the pointer is over the hero or focus is inside it
-  const [hoverPaused, setHoverPaused] = useState(false)
+  // Temporary pause while a link/button inside a slide has keyboard focus
   const [focusPaused, setFocusPaused] = useState(false)
   const draggedRef = useRef(false)
 
@@ -45,7 +47,7 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
   const next = useCallback(() => setIndex((i) => (i + 1) % count), [count])
   const prev = useCallback(() => setIndex((i) => (i - 1 + count) % count), [count])
 
-  const playing = !userPaused && !hoverPaused && !focusPaused
+  const playing = !userPaused && !focusPaused
 
   useEffect(() => {
     if (!playing || count < 2) return
@@ -58,35 +60,38 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
   if (count === 0) return null
   if (count === 1) return <>{slides[0]}</>
 
+  // Any manual navigation stops autoplay until the visitor presses play
+  const navigate = (move: () => void) => {
+    setUserPaused(true)
+    move()
+  }
+
   const handleKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key === "ArrowRight") {
       e.preventDefault()
-      next()
+      navigate(next)
     } else if (e.key === "ArrowLeft") {
       e.preventDefault()
-      prev()
+      navigate(prev)
     }
   }
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x <= -SWIPE_THRESHOLD_PX) next()
-    else if (info.offset.x >= SWIPE_THRESHOLD_PX) prev()
+    if (info.offset.x <= -SWIPE_THRESHOLD_PX) navigate(next)
+    else if (info.offset.x >= SWIPE_THRESHOLD_PX) navigate(prev)
   }
 
   return (
-    <section
-      aria-roledescription="carousel"
-      aria-label="Featured"
-      className="relative"
-      onKeyDown={handleKeyDown}
-      onMouseEnter={() => setHoverPaused(true)}
-      onMouseLeave={() => setHoverPaused(false)}
-      onFocus={() => setFocusPaused(true)}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocusPaused(false)
-      }}
-    >
+    <section aria-roledescription="carousel" aria-label="Featured" className="relative" onKeyDown={handleKeyDown}>
       <motion.div
+        // Only keyboard focus (focus-visible) holds rotation; a mouse click on
+        // a link focuses it too, but that visitor is leaving the slide anyway
+        onFocus={(e) => {
+          if (e.target.matches(":focus-visible")) setFocusPaused(true)
+        }}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocusPaused(false)
+        }}
         // aria-live is off while rotating so screen readers aren't interrupted
         aria-live={playing ? "off" : "polite"}
         className="grid touch-pan-y"
@@ -147,7 +152,7 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
           type="button"
           variant="outline"
           size="icon"
-          onClick={prev}
+          onClick={() => navigate(prev)}
           aria-label="Previous slide"
           className="h-9 w-9 rounded-full bg-background/70 backdrop-blur-sm"
         >
@@ -160,7 +165,7 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() => goTo(i)}
+              onClick={() => navigate(() => goTo(i))}
               aria-label={`Go to slide ${i + 1}: ${slideLabels[i] ?? ""}`}
               aria-current={i === index ? "true" : undefined}
               className="group h-8 w-8 rounded-full hover:bg-transparent"
@@ -178,7 +183,7 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
           type="button"
           variant="outline"
           size="icon"
-          onClick={next}
+          onClick={() => navigate(next)}
           aria-label="Next slide"
           className="h-9 w-9 rounded-full bg-background/70 backdrop-blur-sm"
         >
