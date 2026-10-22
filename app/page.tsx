@@ -1,4 +1,5 @@
 import { HeaderShell } from "@/components/header-shell"
+import { HeroSection } from "@/components/hero-section"
 import { HeroSlider } from "@/components/hero-slider"
 import { BrandStatement } from "@/components/brand-statement"
 import { FeaturedCollections } from "@/components/featured-collections"
@@ -11,6 +12,7 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       <HeaderShell />
+      <HeroSection />
       <HeroSlider />
       <BrandStatement />
       <FeaturedCollections />
