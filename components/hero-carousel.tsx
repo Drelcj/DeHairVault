@@ -82,7 +82,8 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
   }
 
   return (
-    <section aria-roledescription="carousel" aria-label="Featured" className="relative" onKeyDown={handleKeyDown}>
+    // overflow-hidden: nothing in the carousel (slides, drag offset, controls) may widen the page
+    <section aria-roledescription="carousel" aria-label="Featured" className="relative overflow-hidden" onKeyDown={handleKeyDown}>
       <motion.div
         // Only keyboard focus (focus-visible) holds rotation; a mouse click on
         // a link focuses it too, but that visitor is leaving the slide anyway
@@ -94,7 +95,8 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
         }}
         // aria-live is off while rotating so screen readers aren't interrupted
         aria-live={playing ? "off" : "polite"}
-        className="grid touch-pan-y"
+        // grid-cols-1 is minmax(0, 1fr): slides take the container's width, never their content's
+        className="grid grid-cols-1 touch-pan-y"
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.15}
@@ -125,7 +127,7 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
               aria-label={`${i + 1} of ${count}: ${slideLabels[i] ?? ""}`}
               aria-hidden={!active}
               inert={!active}
-              className={cn("col-start-1 row-start-1", !active && "pointer-events-none")}
+              className={cn("col-start-1 row-start-1 min-w-0", !active && "pointer-events-none")}
               initial={false}
               animate={{ opacity: active ? 1 : 0, zIndex: active ? 1 : 0 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.9, ease: "easeInOut" }}
@@ -136,15 +138,16 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
         })}
       </motion.div>
 
-      {/* Controls */}
-      <div className="absolute bottom-4 lg:bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-3 px-6">
+      {/* Controls — below sm the arrows are hidden (swipe replaces them), the dots narrow and sit exactly
+          centred, and the pause button moves to the left edge, so the row fits a 360px phone */}
+      <div className="absolute bottom-4 lg:bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-3 px-4 sm:px-6">
         <Button
           type="button"
           variant="outline"
           size="icon"
           onClick={() => setUserPaused((p) => !p)}
           aria-label={userPaused ? "Start slide rotation" : "Pause slide rotation"}
-          className="h-9 w-9 rounded-full bg-background/70 backdrop-blur-sm"
+          className="absolute left-4 sm:static h-9 w-9 rounded-full bg-background/70 backdrop-blur-sm"
         >
           {userPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
         </Button>
@@ -154,11 +157,11 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
           size="icon"
           onClick={() => navigate(prev)}
           aria-label="Previous slide"
-          className="h-9 w-9 rounded-full bg-background/70 backdrop-blur-sm"
+          className="hidden sm:inline-flex h-9 w-9 rounded-full bg-background/70 backdrop-blur-sm"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {slides.map((_, i) => (
             <Button
               key={i}
@@ -168,7 +171,7 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
               onClick={() => navigate(() => goTo(i))}
               aria-label={`Go to slide ${i + 1}: ${slideLabels[i] ?? ""}`}
               aria-current={i === index ? "true" : undefined}
-              className="group h-8 w-8 rounded-full hover:bg-transparent"
+              className="group h-8 w-6 sm:w-8 rounded-full hover:bg-transparent"
             >
               <span
                 className={cn(
@@ -185,7 +188,7 @@ export function HeroCarousel({ children, slideLabels }: HeroCarouselProps) {
           size="icon"
           onClick={() => navigate(next)}
           aria-label="Next slide"
-          className="h-9 w-9 rounded-full bg-background/70 backdrop-blur-sm"
+          className="hidden sm:inline-flex h-9 w-9 rounded-full bg-background/70 backdrop-blur-sm"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
