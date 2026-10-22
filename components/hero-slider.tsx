@@ -3,7 +3,6 @@ import Image from "next/image"
 import { ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HeroCarousel } from "@/components/hero-carousel"
-import { HeroSection } from "@/components/hero-section"
 import { PriceDisplay } from "@/components/price-display"
 import { getFeaturedProducts } from "@/lib/actions/products"
 import { isSoldOut } from "@/lib/utils/product"
@@ -12,7 +11,7 @@ import type { Product } from "@/types/app.types"
 // Upper bound on featured slides, so the hero stays a short rotation
 const MAX_PRODUCT_SLIDES = 8
 
-function ProductSlide({ product, priority }: { product: Product; priority: boolean }) {
+function ProductSlide({ product }: { product: Product }) {
   const imageUrl = product.thumbnail_url || product.images?.[0] || "/placeholder.svg"
 
   return (
@@ -24,7 +23,7 @@ function ProductSlide({ product, priority }: { product: Product; priority: boole
       <div className="absolute top-1/4 -left-32 w-96 h-96 bg-gradient-to-br from-accent/20 to-gold-muted/30 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gradient-to-br from-rose-gold/20 to-accent/20 rounded-full blur-3xl" />
 
-      <div className="container mx-auto px-6 lg:px-12 pt-20 pb-16 lg:pt-32 lg:pb-28 relative z-10 flex-1 min-h-0 flex flex-col lg:block">
+      <div className="container mx-auto px-6 lg:px-12 pt-6 pb-16 lg:pt-12 lg:pb-28 relative z-10 flex-1 min-h-0 flex flex-col lg:block">
         <div className="flex-1 min-h-0 flex flex-col gap-5 lg:grid lg:grid-cols-2 lg:gap-20 lg:items-center">
           <div className="order-2 lg:order-1 shrink-0 text-center lg:text-left">
             <div className="hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 backdrop-blur-sm border border-border mb-8">
@@ -71,7 +70,6 @@ function ProductSlide({ product, priority }: { product: Product; priority: boole
                     src={imageUrl}
                     alt={product.name}
                     fill
-                    priority={priority}
                     sizes="(min-width: 1024px) 512px, 90vw"
                     className="object-cover"
                   />
@@ -88,18 +86,18 @@ function ProductSlide({ product, priority }: { product: Product; priority: boole
 }
 
 /**
- * Homepage hero: one slide per in-stock featured product, then the brand hero.
+ * Homepage product slider: one slide per in-stock featured product.
+ * Sits directly below the brand hero (HeroSection).
  */
 export async function HeroSlider() {
   const featured = await getFeaturedProducts(MAX_PRODUCT_SLIDES)
   const products = featured.filter((product) => !isSoldOut(product))
 
   return (
-    <HeroCarousel slideLabels={[...products.map((p) => p.name), "Welcome to the Vault"]}>
-      {products.map((product, i) => (
-        <ProductSlide key={product.id} product={product} priority={i === 0} />
+    <HeroCarousel slideLabels={products.map((p) => p.name)}>
+      {products.map((product) => (
+        <ProductSlide key={product.id} product={product} />
       ))}
-      <HeroSection />
     </HeroCarousel>
   )
 }
