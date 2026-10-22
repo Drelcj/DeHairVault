@@ -4,6 +4,8 @@ import { getOrder, getExchangeRates, getCatalogPricesGbp } from '@/lib/actions/c
 import { recordCheckoutStarted } from '@/lib/orders/payment-outcomes'
 import { createClient } from '@/lib/supabase/server'
 import { findPriceViolations, PRICE_DEVIATION_TOLERANCE } from '@/lib/utils/price-guard'
+import { toIsoCountryCode } from '@/lib/utils/country-code'
+import { getPaymentMethodParams, createSessionWithFallback } from './payment-methods'
 import type { OrderItem } from '@/types/app.types'
 
 // Initialize Stripe with the secret key
@@ -259,9 +261,20 @@ export async function POST(request: NextRequest) {
     // or the discount is already reflected in the order total
     // TODO: Implement Stripe Coupon integration for proper discount display
 
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+    // Card + Klarna via the verified Payment Method Configuration (see ./payment-methods)
+    const paymentMethodParams = await getPaymentMethodParams(stripe)
+
+    // Stripe decides payment method eligibility from the shipping address country
+    // (ISO code) before falling back to IP geolocation, so pass it when resolvable.
+    const shippingCountryCode = toIsoCountryCode(order.shipping_country)
+    if (!shippingCountryCode) {
+      console.warn(`[Stripe] Order ${orderNumber}: could not resolve shipping country "${order.shipping_country}"; Stripe will infer it from IP`)
+    }
+
+    // Create Stripe Checkout Session (falls back to card only if the configuration is rejected)
+    const session = await createSessionWithFallback(stripe, {
+      // Collect the billing address on the Stripe page so Stripe and Klarna see the real billing country
+      billing_address_collection: 'required',
       line_items: lineItems,
       mode: 'payment',
       success_url: `${appUrl}/checkout/success?order_number=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
@@ -277,8 +290,22 @@ export async function POST(request: NextRequest) {
       // Lets payment_intent.payment_failed events be matched back to the order
       payment_intent_data: {
         metadata: { orderId, orderNumber },
+        ...(shippingCountryCode && {
+          shipping: {
+            name: order.customer_name,
+            phone: order.customer_phone ?? undefined,
+            address: {
+              line1: order.shipping_address_line1,
+              line2: order.shipping_address_line2 ?? undefined,
+              city: order.shipping_city ?? undefined,
+              state: order.shipping_state ?? undefined,
+              postal_code: order.shipping_postal_code ?? undefined,
+              country: shippingCountryCode,
+            },
+          },
+        }),
       },
-    })
+    }, paymentMethodParams)
 
     console.log('Stripe session created:', session.id)
 

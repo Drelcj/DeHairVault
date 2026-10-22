@@ -62,9 +62,10 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // Card payments complete as 'paid'; anything else is settled by a later event
-        if (session.payment_status === 'unpaid') {
-          console.log(`Checkout completed unpaid for order ${orderId}; waiting for payment`)
+        // Only immediate payment methods (card, wallets, Klarna) are offered, so a completed
+        // session must be paid. Never fulfill one that isn't (e.g. a delayed method enabled by mistake).
+        if (session.payment_status !== 'paid') {
+          console.error(`[Stripe Webhook] Session ${session.id} for order ${orderId} completed with payment_status "${session.payment_status}"; not fulfilling`)
           break
         }
 
