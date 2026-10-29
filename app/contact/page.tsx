@@ -3,6 +3,14 @@ import { Footer } from "@/components/footer"
 import { ContactHero } from "@/components/contact-hero"
 import { ContactForm } from "@/components/contact-form"
 import { ContactInfo } from "@/components/contact-info"
+import { buildMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildMetadata({
+  title: "Contact Us | Dehair Vault",
+  description:
+    "Get in touch with Dehair Vault for help choosing your hair, order questions, wholesale enquiries, and aftercare advice.",
+  path: "/contact",
+})
 
 export default function ContactPage() {
   return (

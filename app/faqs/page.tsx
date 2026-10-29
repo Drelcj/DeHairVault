@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { HeaderShell } from "@/components/header-shell"
 import { Footer } from "@/components/footer"
+import { buildMetadata } from "@/lib/seo/metadata"
 import { 
   HelpCircle, 
   MapPin, 
@@ -13,10 +14,11 @@ import {
   ChevronRight
 } from "lucide-react"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "FAQs | Dehair Vault",
   description: "Frequently asked questions about our premium hair extensions, quality grades, shipping, and returns.",
-}
+  path: "/faqs",
+})
 
 const faqSections = [
   {

@@ -24,7 +24,7 @@ Multi-currency storefront, customer cart/checkout, admin panel for product/order
 1. ~~CRITICAL: Stripe checkout~~ — **FIXED 2026-04-17**: `{CHECKOUT_SESSION_ID}` added to `success_url`. Requires `STRIPE_WEBHOOK_SECRET` set in Vercel env + webhook registered in Stripe dashboard at exactly `https://www.dehairvault.com/api/webhooks/stripe` (the non-www domain redirects and Stripe won't follow redirects).
 2. ~~HIGH: Cart delete button (ghost delete)~~ — **FIXED 2026-04-17**: `008_cart_items_delete_policy.sql` adds the missing RLS DELETE policy.
 3. HIGH: Admin product upload needs direct image upload (Cloudinary), not URL input — see `/app/api/admin/upload/`
-4. MEDIUM: Admin product listing needs Netflix-style video upload + HLS streaming (see `skills.md` SOP-18 for VideoPlayer implementation guide)
+4. ~~MEDIUM: Admin product video upload + HLS streaming~~ — **DONE**: the admin product form uploads video (`app/admin/products/_components/video-upload.tsx` → `lib/actions/video-upload.ts`: S3 ingest → MediaConvert HLS → CloudFront, with deletion), and product pages play it via `components/ui/hls-video-player.tsx`.
 5. ~~HIGH: test suite can't run~~ — **FIXED 2026-10-15**: `@testing-library/jest-dom` installed. On Windows the default forks pool can time out starting workers; use `npx vitest run --pool=threads`.
 6. Stock trigger gaps — see "Live Database State" below.
 
@@ -142,7 +142,7 @@ Optional: `ORDER_ALERT_RECIPIENTS` — comma-separated new-order alert recipient
 
 ### Image & Video Optimization
 - All product images must be served via Cloudinary with `f_auto,q_auto` URL transforms applied. Never serve a raw Cloudinary upload URL without transforms.
-- All product video must be served via Cloudinary's HLS pipeline (`.m3u8`), not as raw `.mp4` files. This enables adaptive bitrate streaming for users on variable connections (Nigeria 3G → UK fibre).
+- Product video does **not** use Cloudinary. It goes through AWS: raw upload to the S3 ingest bucket (`AWS_S3_INGEST_BUCKET`) → MediaConvert HLS transcode into the stream bucket (`AWS_S3_STREAM_BUCKET`) → served via CloudFront (`NEXT_PUBLIC_CLOUDFRONT_STREAM_URL`) as `.m3u8`, never as raw `.mp4`. This enables adaptive bitrate streaming for users on variable connections (Nigeria 3G → UK fibre). Code: `lib/actions/video-upload.ts`; setup notes in `docs/cloudfront-setup.md`.
 - Always specify the `sizes` prop on every `<Image fill>` component. See `skills.md` SOP-15 for the sizes reference per context.
 
 ### React Server Components (RSC)
@@ -156,7 +156,7 @@ Optional: `ORDER_ALERT_RECIPIENTS` — comma-separated new-order alert recipient
 
 ### Video (Netflix-Style Player)
 - Use HLS (`hls.js`) for all video delivery. Never embed a direct `.mp4` URL in a product page.
-- The `getWebCompatibleVideoUrl()` utility must output `.m3u8` Cloudinary URLs, not `.mp4`.
+- The player (`components/ui/hls-video-player.tsx`) takes a CloudFront `.m3u8` URL built from the product's `hls_output_key` (see `app/shop/[slug]/product-detail-client.tsx`).
 - See `skills.md` SOP-18 for the canonical `VideoPlayer` component implementation.
 
 ## Commands

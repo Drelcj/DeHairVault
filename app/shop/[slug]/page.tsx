@@ -6,6 +6,7 @@ import { Footer } from '@/components/footer'
 import { getProductBySlug, getRelatedProducts } from '@/lib/actions/products'
 import { ProductDetailClient } from './product-detail-client'
 import { RelatedProducts } from './related-products'
+import { buildMetadata, cleanDescription, toOgImage } from '@/lib/seo/metadata'
 
 interface ProductPageProps {
   params: Promise<{
@@ -24,40 +25,18 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     }
   }
 
-  const title = `${product.name} | Dehair Vault`
-  const description = product.short_description || product.description || `Shop ${product.name} - Premium quality hair extensions from Dehair Vault`
-  
-  // Get the product image - use absolute URL for social sharing
-  const productImage = product.thumbnail_url || product.images?.[0]
-  const imageUrl = productImage 
-    ? (productImage.startsWith('http') ? productImage : `https://dehairvault.com${productImage}`)
-    : 'https://dehairvault.com/og-default.jpg'
+  const name = product.name.trim()
+  const description =
+    cleanDescription(product.short_description) ||
+    cleanDescription(product.description) ||
+    `Shop ${name} - Premium quality hair extensions from Dehair Vault`
 
-  return {
-    title,
+  return buildMetadata({
+    title: `${name} | Dehair Vault`,
     description,
-    openGraph: {
-      title,
-      description,
-      type: 'website',
-      url: `https://dehairvault.com/shop/${slug}`,
-      images: [
-        {
-          url: imageUrl,
-          width: 1200,
-          height: 630,
-          alt: product.name,
-        },
-      ],
-      siteName: 'Dehair Vault',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [imageUrl],
-    },
-  }
+    path: `/shop/${product.slug}`,
+    image: toOgImage(product.thumbnail_url || product.images?.[0], name),
+  })
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {

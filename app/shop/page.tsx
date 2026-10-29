@@ -3,11 +3,42 @@ import { HeaderShell } from "@/components/header-shell"
 import { Footer } from "@/components/footer"
 import { ShopHero } from "@/components/shop-hero"
 import { ShopContent } from "@/components/shop-content"
+import { HairCategory } from "@/types/app.types"
+import { buildMetadata } from "@/lib/seo/metadata"
 
-export const metadata = {
-  title: "Shop Collections | Dehair Vault",
-  description:
-    "Explore our premium collection of luxury hair extensions. Find your perfect match in texture, length, and style.",
+// Link-preview titles for /shop?category=… (the param is the lowercased HairCategory value)
+const categoryTitles: Record<HairCategory, string> = {
+  [HairCategory.BUNDLES]: "Hair Bundles",
+  [HairCategory.CLOSURE]: "Lace Closures",
+  [HairCategory.FRONTAL]: "Lace Frontals",
+  [HairCategory.WIG]: "Wigs",
+  [HairCategory.PONYTAIL]: "Ponytails",
+  [HairCategory.CLIP_INS]: "Clip-In Extensions",
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string | string[] }>
+}) {
+  const { category } = await searchParams
+  const key = typeof category === "string" ? (category.toUpperCase() as HairCategory) : null
+  const categoryTitle = key ? categoryTitles[key] : undefined
+
+  if (categoryTitle) {
+    return buildMetadata({
+      title: `${categoryTitle} | Dehair Vault`,
+      description: `Shop luxury ${categoryTitle.toLowerCase()} at Dehair Vault — premium raw and virgin human hair in a range of textures, lengths, and origins.`,
+      path: `/shop?category=${key!.toLowerCase()}`,
+    })
+  }
+
+  return buildMetadata({
+    title: "Shop Collections | Dehair Vault",
+    description:
+      "Explore our premium collection of luxury hair extensions. Find your perfect match in texture, length, and style.",
+    path: "/shop",
+  })
 }
 
 // Loading fallback for the shop content
