@@ -7,6 +7,7 @@ import { OriginNavigationCards } from '@/components/origin-navigation-cards'
 import { getProductsByOrigin, getOriginProductImages } from '@/lib/actions/origin'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
+import { buildMetadata } from '@/lib/seo/metadata'
 
 // Map slugs to origin values (string type for dynamic support)
 const originSlugMap: Record<string, string> = {
@@ -55,16 +56,11 @@ export async function generateMetadata({ params }: OriginPageProps): Promise<Met
   const displayName = originDisplayNames[origin]
   const description = originDescriptions[origin]
 
-  return {
+  return buildMetadata({
     title: `${displayName} Hair Extensions | Dehair Vault`,
     description,
-    openGraph: {
-      title: `${displayName} Hair Extensions | Dehair Vault`,
-      description,
-      type: 'website',
-      url: `https://dehairvault.com/shop/origin/${originSlug}`,
-    },
-  }
+    path: `/shop/origin/${originSlug.toLowerCase()}`,
+  })
 }
 
 export async function generateStaticParams() {

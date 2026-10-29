@@ -10,6 +10,7 @@ import { CURRENCY_COOKIE_KEY, DEFAULT_CURRENCY, isSupportedCurrency } from "@/li
 import { getExchangeRatesSafe } from "@/lib/currency/rates"
 import { CartSheet } from "@/components/cart/cart-sheet"
 import { Toaster } from "sonner"
+import { SITE_URL, buildMetadata } from "@/lib/seo/metadata"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -18,32 +19,14 @@ const playfair = Playfair_Display({
   variable: "--font-playfair",
 })
 
+// Site-wide defaults; each public page overrides these via buildMetadata().
 export const metadata: Metadata = {
-  title: "Dehair Vault | Luxury Hair Extensions",
-  description:
-    "Where elegance, confidence, and premium hair meet. Discover our exclusive collection of luxury hair extensions.",
-  metadataBase: new URL('https://dehairvault.com'),
-  openGraph: {
-    title: 'Dehair Vault | Luxury Hair Extensions',
-    description: 'Where elegance, confidence, and premium hair meet. Discover our exclusive collection of luxury hair extensions.',
-    type: 'website',
-    url: 'https://dehairvault.com',
-    siteName: 'Dehair Vault',
-    images: [
-      {
-        url: 'https://dehairvault.com/og-default.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Dehair Vault - Luxury Hair Extensions',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Dehair Vault | Luxury Hair Extensions',
-    description: 'Where elegance, confidence, and premium hair meet. Discover our exclusive collection of luxury hair extensions.',
-    images: ['https://dehairvault.com/og-default.jpg'],
-  },
+  metadataBase: new URL(SITE_URL),
+  ...buildMetadata({
+    title: "Dehair Vault | Luxury Hair Extensions",
+    description:
+      "Where elegance, confidence, and premium hair meet. Discover our exclusive collection of luxury hair extensions.",
+  }),
 }
 
 export default async function RootLayout({

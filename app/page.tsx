@@ -7,6 +7,14 @@ import { FeaturesSection } from "@/components/features-section"
 import { TestimonialSection } from "@/components/testimonial-section"
 import { NewsletterSection } from "@/components/newsletter-section"
 import { Footer } from "@/components/footer"
+import { buildMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildMetadata({
+  title: "Dehair Vault | Luxury Hair Extensions",
+  description:
+    "Where elegance, confidence, and premium hair meet. Discover our exclusive collection of luxury hair extensions.",
+  path: "/",
+})
 
 export default function Home() {
   return (

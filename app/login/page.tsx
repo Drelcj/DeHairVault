@@ -2,6 +2,14 @@ import { Suspense } from "react"
 import { HeaderShell } from "@/components/header-shell"
 import { Footer } from "@/components/footer"
 import { LoginForm } from "@/components/auth/login-form"
+import { buildMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildMetadata({
+  title: "Sign In | Dehair Vault",
+  description: "Sign in to your Dehair Vault account to view your orders and check out faster.",
+  path: "/login",
+  noIndex: true,
+})
 
 export const dynamic = 'force-dynamic'
 

@@ -7,11 +7,13 @@ import { ShippingPolicy } from "@/components/shipping-policy"
 import { ReturnPolicy } from "@/components/return-policy"
 import { TermsConditions } from "@/components/terms-conditions"
 import { PrivacyPolicy } from "@/components/privacy-policy"
+import { buildMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Customer Care & Policies | Dehair Vault",
   description: "Learn about our shipping, returns, terms & conditions, and privacy policies at Dehair Vault.",
-}
+  path: "/policies",
+})
 
 export default function PoliciesPage() {
   return (
