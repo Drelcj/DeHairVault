@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Play, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Settings } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, PictureInPicture2, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -16,9 +16,27 @@ interface QualityLevel {
 
 type PlayerState = 'loading' | 'ready' | 'playing' | 'paused' | 'error'
 
+// Vendor-prefixed fullscreen APIs: Safari on iPad/macOS (webkit*Fullscreen on
+// elements) and iPhone, which can only fullscreen the <video> element itself.
+interface WebkitDocument extends Document {
+  webkitFullscreenElement?: Element | null
+  webkitFullscreenEnabled?: boolean
+  webkitExitFullscreen?: () => void
+}
+
+interface WebkitElement extends HTMLElement {
+  webkitRequestFullscreen?: () => void
+}
+
+interface WebkitVideoElement extends HTMLVideoElement {
+  webkitEnterFullscreen?: () => void
+}
+
 interface HlsVideoPlayerProps {
-  /** Full CloudFront .m3u8 URL, e.g. https://d1abc.cloudfront.net/videos/key/hls/index.m3u8 */
+  /** Full CloudFront .m3u8 URL of the master playlist, so hls.js can adapt quality */
   src: string
+  /** Image shown before playback starts */
+  poster?: string
   /** Shown in aria labels and error messages */
   title?: string
   /** Auto-play when 50 %+ of the player is in the viewport (desktop only) */
@@ -52,6 +70,7 @@ function qualityLabel(level: QualityLevel): string {
 
 export function HlsVideoPlayer({
   src,
+  poster,
   title = 'Product video',
   autoplayOnScroll = true,
   muted: initialMuted = true,
@@ -76,6 +95,9 @@ export function HlsVideoPlayer({
   const [currentQuality, setCurrentQuality] = useState<number>(-1) // -1 = Auto
   const [showQualityMenu, setShowQualityMenu] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  // Width / height of the actual video frames; 16:9 until metadata arrives
+  const [aspectRatio, setAspectRatio] = useState(16 / 9)
 
   // ── HLS initialisation ───────────────────────────────────────────────────
 
@@ -207,6 +229,34 @@ export function HlsVideoPlayer({
     }
   }, [])
 
+  // ── Fullscreen event listeners ───────────────────────────────────────────
+
+  useEffect(() => {
+    const video = videoRef.current
+    const container = containerRef.current
+    if (!video || !container) return
+
+    const doc = document as WebkitDocument
+    const syncElementFullscreen = () => {
+      const el = doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null
+      setIsFullscreen(el === container || el === video)
+    }
+    // iPhone: native video fullscreen fires its own events
+    const enterNative = () => setIsFullscreen(true)
+    const leaveNative = () => setIsFullscreen(false)
+
+    document.addEventListener('fullscreenchange', syncElementFullscreen)
+    document.addEventListener('webkitfullscreenchange', syncElementFullscreen)
+    video.addEventListener('webkitbeginfullscreen', enterNative)
+    video.addEventListener('webkitendfullscreen', leaveNative)
+    return () => {
+      document.removeEventListener('fullscreenchange', syncElementFullscreen)
+      document.removeEventListener('webkitfullscreenchange', syncElementFullscreen)
+      video.removeEventListener('webkitbeginfullscreen', enterNative)
+      video.removeEventListener('webkitendfullscreen', leaveNative)
+    }
+  }, [])
+
   // ── Video event handlers ─────────────────────────────────────────────────
 
   const handleTimeUpdate = useCallback(() => {
@@ -217,6 +267,14 @@ export function HlsVideoPlayer({
     // Calculate buffered end
     if (video.buffered.length > 0) {
       setBuffered(video.buffered.end(video.buffered.length - 1))
+    }
+  }, [])
+
+  // Fires on loadedmetadata and whenever an ABR switch changes the frame size
+  const handleResize = useCallback(() => {
+    const video = videoRef.current
+    if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+      setAspectRatio(video.videoWidth / video.videoHeight)
     }
   }, [])
 
@@ -263,13 +321,29 @@ export function HlsVideoPlayer({
     video.muted = val === 0
   }, [])
 
-  const toggleFullscreen = useCallback(() => {
-    const container = containerRef.current
-    if (!container) return
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
-    } else {
-      container.requestFullscreen()
+  const toggleFullscreen = useCallback(async () => {
+    const container = containerRef.current as WebkitElement | null
+    const video = videoRef.current as WebkitVideoElement | null
+    if (!container || !video) return
+    const doc = document as WebkitDocument
+
+    try {
+      if (doc.fullscreenElement) {
+        await doc.exitFullscreen()
+      } else if (doc.webkitFullscreenElement) {
+        doc.webkitExitFullscreen?.()
+      } else if (doc.fullscreenEnabled && container.requestFullscreen) {
+        // Desktop + Android: fullscreen the container so our controls come along
+        await container.requestFullscreen()
+      } else if (doc.webkitFullscreenEnabled && container.webkitRequestFullscreen) {
+        // Older Safari / iPad
+        container.webkitRequestFullscreen()
+      } else if (video.webkitEnterFullscreen) {
+        // iPhone: only the <video> element can go fullscreen (native controls)
+        video.webkitEnterFullscreen()
+      }
+    } catch {
+      // Fullscreen rejected — browser may require a user gesture
     }
   }, [])
 
@@ -349,10 +423,14 @@ export function HlsVideoPlayer({
         setShowQualityMenu(false)
       }}
       className={cn(
-        'group relative w-full overflow-hidden rounded-xl bg-black select-none',
+        // Sized to the video's own aspect ratio: full column width, but never
+        // taller than 80% (mobile) / 70% (desktop) of the viewport, so vertical
+        // videos stay vertical and uncropped. Fullscreen UA styles override this.
+        'group @container relative mx-auto overflow-hidden rounded-xl bg-black select-none',
+        'w-[min(100%,calc(80svh*var(--video-ratio)))] lg:w-[min(100%,calc(70vh*var(--video-ratio)))]',
         className
       )}
-      style={{ aspectRatio: '16/9' }}
+      style={{ aspectRatio, '--video-ratio': aspectRatio } as React.CSSProperties}
     >
       {/* ── Video element ─────────────────────────────────────────────── */}
       <video
@@ -361,7 +439,10 @@ export function HlsVideoPlayer({
         playsInline
         muted={initialMuted}
         preload="metadata"
+        poster={poster}
         aria-label={title}
+        onLoadedMetadata={handleResize}
+        onResize={handleResize}
         onTimeUpdate={handleTimeUpdate}
         onDurationChange={handleDurationChange}
         onPlay={handlePlay}
@@ -404,7 +485,7 @@ export function HlsVideoPlayer({
       {/* ── Controls overlay ───────────────────────────────────────────── */}
       <div
         className={cn(
-          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-4 pb-3 pt-10 transition-opacity duration-300',
+          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-3 pb-3 pt-10 transition-opacity duration-300 @sm:px-4',
           showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
         onClick={(e) => e.stopPropagation()}
@@ -439,7 +520,7 @@ export function HlsVideoPlayer({
         </div>
 
         {/* Bottom row */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1 @sm:gap-2">
           {/* Play / pause */}
           <button
             onClick={togglePlay}
@@ -469,12 +550,12 @@ export function HlsVideoPlayer({
             value={isMuted ? 0 : volume}
             onChange={handleVolumeSlider}
             onClick={(e) => e.stopPropagation()}
-            className="w-16 cursor-pointer accent-accent"
+            className="w-16 cursor-pointer accent-accent pointer-coarse:hidden @max-sm:hidden"
             aria-label="Volume"
           />
 
           {/* Timestamp */}
-          <span className="text-xs tabular-nums text-white/70 ml-1">
+          <span className="ml-1 min-w-0 truncate text-xs tabular-nums text-white/70">
             {formatTime(currentTime)}
             <span className="text-white/40"> / </span>
             {formatTime(duration)}
@@ -492,7 +573,7 @@ export function HlsVideoPlayer({
                 aria-label="Quality settings"
               >
                 <Settings className="h-3.5 w-3.5" />
-                {activeQualityLabel}
+                <span className="@max-sm:hidden">{activeQualityLabel}</span>
               </button>
 
               {showQualityMenu && (
@@ -528,7 +609,7 @@ export function HlsVideoPlayer({
             <button
               onClick={(e) => { e.stopPropagation(); togglePiP() }}
               className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors @max-sm:hidden',
                 isPiP && 'text-accent'
               )}
               aria-label={isPiP ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
@@ -541,9 +622,9 @@ export function HlsVideoPlayer({
           <button
             onClick={(e) => { e.stopPropagation(); toggleFullscreen() }}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors"
-            aria-label="Fullscreen"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
-            <Maximize className="h-4 w-4" />
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </button>
         </div>
       </div>
