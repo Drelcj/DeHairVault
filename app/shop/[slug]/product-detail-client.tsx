@@ -360,10 +360,14 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           {/* S3/HLS Streaming Video — only renders when a transcoding job exists */}
           {product.hls_output_key && (() => {
             // hls_output_key = "videos/1777727670128-hair_video"
-            // MediaConvert names manifests as: {basename}-{resolution}.m3u8
-            // e.g. hls/1777727670128-hair_video-1080p.m3u8
+            // MediaConvert names manifests as: {basename}-{resolution}.m3u8 and
+            // the thumbnail thumbnails/{basename}-thumb.0000000.jpg.
+            // Always the 1080p rendition (not the master playlist), so every
+            // viewer gets full quality.
             const hlsBaseName = product.hls_output_key.split('/').pop()!
-            const hlsSrc = `${process.env.NEXT_PUBLIC_CLOUDFRONT_STREAM_URL}/${product.hls_output_key}/hls/${hlsBaseName}-1080p.m3u8`
+            const streamBase = `${process.env.NEXT_PUBLIC_CLOUDFRONT_STREAM_URL}/${product.hls_output_key}`
+            const hlsSrc = `${streamBase}/hls/${hlsBaseName}-1080p.m3u8`
+            const posterSrc = `${streamBase}/thumbnails/${hlsBaseName}-thumb.0000000.jpg`
 
             return (
               <div className="pt-6 border-t border-border">
@@ -382,6 +386,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 ) : (
                   <HlsVideoPlayer
                     src={hlsSrc}
+                    poster={posterSrc}
                     title={product.name}
                     autoplayOnScroll
                   />

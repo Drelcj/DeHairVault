@@ -1,24 +1,36 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Play, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Settings } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, PictureInPicture2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface QualityLevel {
-  index: number
-  height: number
-  bitrate: number
-}
-
 type PlayerState = 'loading' | 'ready' | 'playing' | 'paused' | 'error'
 
+// Vendor-prefixed fullscreen APIs: Safari on iPad/macOS (webkit*Fullscreen on
+// elements) and iPhone, which can only fullscreen the <video> element itself.
+interface WebkitDocument extends Document {
+  webkitFullscreenElement?: Element | null
+  webkitFullscreenEnabled?: boolean
+  webkitExitFullscreen?: () => void
+}
+
+interface WebkitElement extends HTMLElement {
+  webkitRequestFullscreen?: () => void
+}
+
+interface WebkitVideoElement extends HTMLVideoElement {
+  webkitEnterFullscreen?: () => void
+}
+
 interface HlsVideoPlayerProps {
-  /** Full CloudFront .m3u8 URL, e.g. https://d1abc.cloudfront.net/videos/key/hls/index.m3u8 */
+  /** Full CloudFront .m3u8 URL of a single rendition, e.g. .../hls/{basename}-1080p.m3u8 */
   src: string
+  /** Image shown before playback starts */
+  poster?: string
   /** Shown in aria labels and error messages */
   title?: string
   /** Auto-play when 50 %+ of the player is in the viewport (desktop only) */
@@ -39,19 +51,13 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function qualityLabel(level: QualityLevel): string {
-  if (level.height >= 1080) return '1080p'
-  if (level.height >= 720) return '720p'
-  if (level.height >= 480) return '480p'
-  return `${level.height}p`
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function HlsVideoPlayer({
   src,
+  poster,
   title = 'Product video',
   autoplayOnScroll = true,
   muted: initialMuted = true,
@@ -72,10 +78,10 @@ export function HlsVideoPlayer({
   const [showControls, setShowControls] = useState(true)
   const [isPiP, setIsPiP] = useState(false)
   const [isPiPSupported, setIsPiPSupported] = useState(false)
-  const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([])
-  const [currentQuality, setCurrentQuality] = useState<number>(-1) // -1 = Auto
-  const [showQualityMenu, setShowQualityMenu] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  // Width / height of the actual video frames; 16:9 until metadata arrives
+  const [aspectRatio, setAspectRatio] = useState(16 / 9)
 
   // ── HLS initialisation ───────────────────────────────────────────────────
 
@@ -109,17 +115,8 @@ export function HlsVideoPlayer({
         hls.loadSource(src)
         hls.attachMedia(video!)
 
-        hls.on(Hls.Events.MANIFEST_PARSED, (_event: unknown, data: { levels: Array<{ height: number; bitrate: number }> }) => {
-          const levels: QualityLevel[] = data.levels.map(
-            (l, i) => ({ index: i, height: l.height, bitrate: l.bitrate })
-          )
-          // Sort highest quality first for the menu
-          setQualityLevels([...levels].sort((a, b) => b.height - a.height))
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
           setPlayerState('ready')
-        })
-
-        hls.on(Hls.Events.LEVEL_SWITCHED, (_event: unknown, data: { level: number }) => {
-          setCurrentQuality(hls.autoLevelEnabled ? -1 : data.level)
         })
 
         hls.on(Hls.Events.ERROR, (_event: unknown, data: { fatal: boolean; type: string; details: string }) => {
@@ -207,6 +204,34 @@ export function HlsVideoPlayer({
     }
   }, [])
 
+  // ── Fullscreen event listeners ───────────────────────────────────────────
+
+  useEffect(() => {
+    const video = videoRef.current
+    const container = containerRef.current
+    if (!video || !container) return
+
+    const doc = document as WebkitDocument
+    const syncElementFullscreen = () => {
+      const el = doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null
+      setIsFullscreen(el === container || el === video)
+    }
+    // iPhone: native video fullscreen fires its own events
+    const enterNative = () => setIsFullscreen(true)
+    const leaveNative = () => setIsFullscreen(false)
+
+    document.addEventListener('fullscreenchange', syncElementFullscreen)
+    document.addEventListener('webkitfullscreenchange', syncElementFullscreen)
+    video.addEventListener('webkitbeginfullscreen', enterNative)
+    video.addEventListener('webkitendfullscreen', leaveNative)
+    return () => {
+      document.removeEventListener('fullscreenchange', syncElementFullscreen)
+      document.removeEventListener('webkitfullscreenchange', syncElementFullscreen)
+      video.removeEventListener('webkitbeginfullscreen', enterNative)
+      video.removeEventListener('webkitendfullscreen', leaveNative)
+    }
+  }, [])
+
   // ── Video event handlers ─────────────────────────────────────────────────
 
   const handleTimeUpdate = useCallback(() => {
@@ -217,6 +242,14 @@ export function HlsVideoPlayer({
     // Calculate buffered end
     if (video.buffered.length > 0) {
       setBuffered(video.buffered.end(video.buffered.length - 1))
+    }
+  }, [])
+
+  // Fires on loadedmetadata and whenever an ABR switch changes the frame size
+  const handleResize = useCallback(() => {
+    const video = videoRef.current
+    if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+      setAspectRatio(video.videoWidth / video.videoHeight)
     }
   }, [])
 
@@ -263,13 +296,29 @@ export function HlsVideoPlayer({
     video.muted = val === 0
   }, [])
 
-  const toggleFullscreen = useCallback(() => {
-    const container = containerRef.current
-    if (!container) return
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
-    } else {
-      container.requestFullscreen()
+  const toggleFullscreen = useCallback(async () => {
+    const container = containerRef.current as WebkitElement | null
+    const video = videoRef.current as WebkitVideoElement | null
+    if (!container || !video) return
+    const doc = document as WebkitDocument
+
+    try {
+      if (doc.fullscreenElement) {
+        await doc.exitFullscreen()
+      } else if (doc.webkitFullscreenElement) {
+        doc.webkitExitFullscreen?.()
+      } else if (doc.fullscreenEnabled && container.requestFullscreen) {
+        // Desktop + Android: fullscreen the container so our controls come along
+        await container.requestFullscreen()
+      } else if (doc.webkitFullscreenEnabled && container.webkitRequestFullscreen) {
+        // Older Safari / iPad
+        container.webkitRequestFullscreen()
+      } else if (video.webkitEnterFullscreen) {
+        // iPhone: only the <video> element can go fullscreen (native controls)
+        video.webkitEnterFullscreen()
+      }
+    } catch {
+      // Fullscreen rejected — browser may require a user gesture
     }
   }, [])
 
@@ -286,18 +335,6 @@ export function HlsVideoPlayer({
       // PiP rejected — browser may require user gesture or secure context
     }
   }, [isPiPSupported])
-
-  const setQuality = useCallback((levelIndex: number) => {
-    const hls = hlsRef.current
-    if (!hls) return
-    if (levelIndex === -1) {
-      hls.currentLevel = -1 // Auto ABR
-    } else {
-      hls.currentLevel = levelIndex
-    }
-    setCurrentQuality(levelIndex)
-    setShowQualityMenu(false)
-  }, [])
 
   // ── Auto-hide controls ───────────────────────────────────────────────────
 
@@ -327,12 +364,6 @@ export function HlsVideoPlayer({
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
   const bufferedPercent = duration > 0 ? (buffered / duration) * 100 : 0
-  const activeQualityLabel =
-    currentQuality === -1
-      ? 'Auto'
-      : qualityLevels.find((l) => l.index === currentQuality)
-        ? qualityLabel(qualityLevels.find((l) => l.index === currentQuality)!)
-        : 'Auto'
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -346,13 +377,16 @@ export function HlsVideoPlayer({
         if (playerState === 'ready' || playerState === 'paused' || playerState === 'playing') {
           togglePlay()
         }
-        setShowQualityMenu(false)
       }}
       className={cn(
-        'group relative w-full overflow-hidden rounded-xl bg-black select-none',
+        // Sized to the video's own aspect ratio: full column width, but never
+        // taller than 80% (mobile) / 70% (desktop) of the viewport, so vertical
+        // videos stay vertical and uncropped. Fullscreen UA styles override this.
+        'group @container relative mx-auto overflow-hidden rounded-xl bg-black select-none',
+        'w-[min(100%,calc(80svh*var(--video-ratio)))] lg:w-[min(100%,calc(70vh*var(--video-ratio)))]',
         className
       )}
-      style={{ aspectRatio: '16/9' }}
+      style={{ aspectRatio, '--video-ratio': aspectRatio } as React.CSSProperties}
     >
       {/* ── Video element ─────────────────────────────────────────────── */}
       <video
@@ -361,7 +395,10 @@ export function HlsVideoPlayer({
         playsInline
         muted={initialMuted}
         preload="metadata"
+        poster={poster}
         aria-label={title}
+        onLoadedMetadata={handleResize}
+        onResize={handleResize}
         onTimeUpdate={handleTimeUpdate}
         onDurationChange={handleDurationChange}
         onPlay={handlePlay}
@@ -404,7 +441,7 @@ export function HlsVideoPlayer({
       {/* ── Controls overlay ───────────────────────────────────────────── */}
       <div
         className={cn(
-          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-4 pb-3 pt-10 transition-opacity duration-300',
+          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-3 pb-3 pt-10 transition-opacity duration-300 @sm:px-4',
           showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
         onClick={(e) => e.stopPropagation()}
@@ -439,7 +476,7 @@ export function HlsVideoPlayer({
         </div>
 
         {/* Bottom row */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1 @sm:gap-2">
           {/* Play / pause */}
           <button
             onClick={togglePlay}
@@ -469,12 +506,12 @@ export function HlsVideoPlayer({
             value={isMuted ? 0 : volume}
             onChange={handleVolumeSlider}
             onClick={(e) => e.stopPropagation()}
-            className="w-16 cursor-pointer accent-accent"
+            className="w-16 cursor-pointer accent-accent pointer-coarse:hidden @max-sm:hidden"
             aria-label="Volume"
           />
 
           {/* Timestamp */}
-          <span className="text-xs tabular-nums text-white/70 ml-1">
+          <span className="ml-1 min-w-0 truncate text-xs tabular-nums text-white/70">
             {formatTime(currentTime)}
             <span className="text-white/40"> / </span>
             {formatTime(duration)}
@@ -483,52 +520,12 @@ export function HlsVideoPlayer({
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Quality picker */}
-          {qualityLevels.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowQualityMenu((v) => !v) }}
-                className="flex h-8 items-center gap-1 rounded px-2 text-xs font-medium text-white hover:bg-white/10 transition-colors"
-                aria-label="Quality settings"
-              >
-                <Settings className="h-3.5 w-3.5" />
-                {activeQualityLabel}
-              </button>
-
-              {showQualityMenu && (
-                <div className="absolute bottom-10 right-0 z-50 min-w-[90px] overflow-hidden rounded-lg border border-white/10 bg-black/90 backdrop-blur-sm shadow-xl">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setQuality(-1) }}
-                    className={cn(
-                      'w-full px-4 py-2 text-left text-xs transition-colors hover:bg-white/10',
-                      currentQuality === -1 ? 'text-accent font-semibold' : 'text-white'
-                    )}
-                  >
-                    Auto
-                  </button>
-                  {qualityLevels.map((level) => (
-                    <button
-                      key={level.index}
-                      onClick={(e) => { e.stopPropagation(); setQuality(level.index) }}
-                      className={cn(
-                        'w-full px-4 py-2 text-left text-xs transition-colors hover:bg-white/10',
-                        currentQuality === level.index ? 'text-accent font-semibold' : 'text-white'
-                      )}
-                    >
-                      {qualityLabel(level)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* PiP */}
           {isPiPSupported && (
             <button
               onClick={(e) => { e.stopPropagation(); togglePiP() }}
               className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors @max-sm:hidden',
                 isPiP && 'text-accent'
               )}
               aria-label={isPiP ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
@@ -541,9 +538,9 @@ export function HlsVideoPlayer({
           <button
             onClick={(e) => { e.stopPropagation(); toggleFullscreen() }}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors"
-            aria-label="Fullscreen"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
-            <Maximize className="h-4 w-4" />
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </button>
         </div>
       </div>
