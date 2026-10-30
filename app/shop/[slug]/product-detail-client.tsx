@@ -360,12 +360,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           {/* S3/HLS Streaming Video — only renders when a transcoding job exists */}
           {product.hls_output_key && (() => {
             // hls_output_key = "videos/1777727670128-hair_video"
-            // MediaConvert names the master playlist hls/{basename}.m3u8 (it lists
-            // the 1080p / 720p / 480p renditions, so hls.js adapts quality) and
-            // the thumbnail thumbnails/{basename}-thumb.0000000.jpg
+            // MediaConvert names manifests as: {basename}-{resolution}.m3u8 and
+            // the thumbnail thumbnails/{basename}-thumb.0000000.jpg.
+            // Always the 1080p rendition (not the master playlist), so every
+            // viewer gets full quality.
             const hlsBaseName = product.hls_output_key.split('/').pop()!
             const streamBase = `${process.env.NEXT_PUBLIC_CLOUDFRONT_STREAM_URL}/${product.hls_output_key}`
-            const hlsSrc = `${streamBase}/hls/${hlsBaseName}.m3u8`
+            const hlsSrc = `${streamBase}/hls/${hlsBaseName}-1080p.m3u8`
             const posterSrc = `${streamBase}/thumbnails/${hlsBaseName}-thumb.0000000.jpg`
 
             return (

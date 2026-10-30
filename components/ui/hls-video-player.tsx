@@ -1,18 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, PictureInPicture2, Settings } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, PictureInPicture2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface QualityLevel {
-  index: number
-  height: number
-  bitrate: number
-}
 
 type PlayerState = 'loading' | 'ready' | 'playing' | 'paused' | 'error'
 
@@ -33,7 +27,7 @@ interface WebkitVideoElement extends HTMLVideoElement {
 }
 
 interface HlsVideoPlayerProps {
-  /** Full CloudFront .m3u8 URL of the master playlist, so hls.js can adapt quality */
+  /** Full CloudFront .m3u8 URL of a single rendition, e.g. .../hls/{basename}-1080p.m3u8 */
   src: string
   /** Image shown before playback starts */
   poster?: string
@@ -55,13 +49,6 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
   return `${m}:${s.toString().padStart(2, '0')}`
-}
-
-function qualityLabel(level: QualityLevel): string {
-  if (level.height >= 1080) return '1080p'
-  if (level.height >= 720) return '720p'
-  if (level.height >= 480) return '480p'
-  return `${level.height}p`
 }
 
 // ---------------------------------------------------------------------------
@@ -91,9 +78,6 @@ export function HlsVideoPlayer({
   const [showControls, setShowControls] = useState(true)
   const [isPiP, setIsPiP] = useState(false)
   const [isPiPSupported, setIsPiPSupported] = useState(false)
-  const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([])
-  const [currentQuality, setCurrentQuality] = useState<number>(-1) // -1 = Auto
-  const [showQualityMenu, setShowQualityMenu] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   // Width / height of the actual video frames; 16:9 until metadata arrives
@@ -131,17 +115,8 @@ export function HlsVideoPlayer({
         hls.loadSource(src)
         hls.attachMedia(video!)
 
-        hls.on(Hls.Events.MANIFEST_PARSED, (_event: unknown, data: { levels: Array<{ height: number; bitrate: number }> }) => {
-          const levels: QualityLevel[] = data.levels.map(
-            (l, i) => ({ index: i, height: l.height, bitrate: l.bitrate })
-          )
-          // Sort highest quality first for the menu
-          setQualityLevels([...levels].sort((a, b) => b.height - a.height))
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
           setPlayerState('ready')
-        })
-
-        hls.on(Hls.Events.LEVEL_SWITCHED, (_event: unknown, data: { level: number }) => {
-          setCurrentQuality(hls.autoLevelEnabled ? -1 : data.level)
         })
 
         hls.on(Hls.Events.ERROR, (_event: unknown, data: { fatal: boolean; type: string; details: string }) => {
@@ -361,18 +336,6 @@ export function HlsVideoPlayer({
     }
   }, [isPiPSupported])
 
-  const setQuality = useCallback((levelIndex: number) => {
-    const hls = hlsRef.current
-    if (!hls) return
-    if (levelIndex === -1) {
-      hls.currentLevel = -1 // Auto ABR
-    } else {
-      hls.currentLevel = levelIndex
-    }
-    setCurrentQuality(levelIndex)
-    setShowQualityMenu(false)
-  }, [])
-
   // ── Auto-hide controls ───────────────────────────────────────────────────
 
   const revealControls = useCallback(() => {
@@ -401,12 +364,6 @@ export function HlsVideoPlayer({
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
   const bufferedPercent = duration > 0 ? (buffered / duration) * 100 : 0
-  const activeQualityLabel =
-    currentQuality === -1
-      ? 'Auto'
-      : qualityLevels.find((l) => l.index === currentQuality)
-        ? qualityLabel(qualityLevels.find((l) => l.index === currentQuality)!)
-        : 'Auto'
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -420,7 +377,6 @@ export function HlsVideoPlayer({
         if (playerState === 'ready' || playerState === 'paused' || playerState === 'playing') {
           togglePlay()
         }
-        setShowQualityMenu(false)
       }}
       className={cn(
         // Sized to the video's own aspect ratio: full column width, but never
@@ -563,46 +519,6 @@ export function HlsVideoPlayer({
 
           {/* Spacer */}
           <div className="flex-1" />
-
-          {/* Quality picker */}
-          {qualityLevels.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowQualityMenu((v) => !v) }}
-                className="flex h-8 items-center gap-1 rounded px-2 text-xs font-medium text-white hover:bg-white/10 transition-colors"
-                aria-label="Quality settings"
-              >
-                <Settings className="h-3.5 w-3.5" />
-                <span className="@max-sm:hidden">{activeQualityLabel}</span>
-              </button>
-
-              {showQualityMenu && (
-                <div className="absolute bottom-10 right-0 z-50 min-w-[90px] overflow-hidden rounded-lg border border-white/10 bg-black/90 backdrop-blur-sm shadow-xl">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setQuality(-1) }}
-                    className={cn(
-                      'w-full px-4 py-2 text-left text-xs transition-colors hover:bg-white/10',
-                      currentQuality === -1 ? 'text-accent font-semibold' : 'text-white'
-                    )}
-                  >
-                    Auto
-                  </button>
-                  {qualityLevels.map((level) => (
-                    <button
-                      key={level.index}
-                      onClick={(e) => { e.stopPropagation(); setQuality(level.index) }}
-                      className={cn(
-                        'w-full px-4 py-2 text-left text-xs transition-colors hover:bg-white/10',
-                        currentQuality === level.index ? 'text-accent font-semibold' : 'text-white'
-                      )}
-                    >
-                      {qualityLabel(level)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* PiP */}
           {isPiPSupported && (
