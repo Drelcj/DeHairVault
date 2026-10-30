@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShoppingBag, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, Play } from 'lucide-react'
+import { ShoppingBag, Heart, Truck, Shield, RotateCcw, ChevronLeft, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ShareButton } from '@/components/share-button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { cn } from '@/lib/utils'
 import { isSoldOut } from '@/lib/utils/product'
@@ -281,9 +282,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             >
               <Heart className={cn('h-5 w-5', isWishlisted && 'fill-current text-accent')} />
             </Button>
-            <Button variant="outline" size="icon" className="h-12 w-12">
-              <Share2 className="h-5 w-5" />
-            </Button>
+            <ShareButton path={`/shop/${product.slug}`} title={product.name} />
           </div>
 
           {/* Trust Badges */}
